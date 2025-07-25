@@ -140,7 +140,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/trex/Project  Placement  DEV/TurboRepo/EnChat/packages/db/prisma/client",
+      "value": "/home/trex/Project  Placement  DEV/TurboRepo/EnChat/packages/db/generatedClient/@prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -158,10 +158,10 @@ const config = {
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": "../../.env",
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": "../../../.env",
+    "schemaEnvPath": "../../../.env"
   },
-  "relativePath": "..",
+  "relativePath": "../../../prisma",
   "clientVersion": "6.12.0",
   "engineVersion": "8047c96bbd92db98a2abc7c9323ce77c02c89dbc",
   "datasourceNames": [
@@ -177,8 +177,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"./client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int      @id @default(autoincrement())\n  username  String\n  firstname String\n  lastname  String?\n  password  String\n  email     String\n  createdAt DateTime @default(now())\n\n  // relation to chats\n  chats Chats[]\n}\n\nmodel Chats {\n  id      Int    @id @default(autoincrement())\n  userId  Int\n  message String\n\n  // Relating Chats to user {this  is  one to may relation}\n\n  user User @relation(fields: [userId], references: [id])\n}\n",
-  "inlineSchemaHash": "546d78cd458eaa4301fb91fb11572505931f4de368f6418056af56dd1f94eb0a",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generatedClient/@prisma/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int      @id @default(autoincrement())\n  username  String\n  firstname String\n  lastname  String?\n  password  String\n  email     String\n  createdAt DateTime @default(now())\n\n  // relation to chats\n  chats Chats[]\n}\n\nmodel Chats {\n  id      Int    @id @default(autoincrement())\n  userId  Int\n  message String\n\n  // Relating Chats to user {this  is  one to may relation}\n\n  user User @relation(fields: [userId], references: [id])\n}\n",
+  "inlineSchemaHash": "ff32bb7c7f75933e0e02d748da908d359b756a762075d4b05da1d03094f0b3aa",
   "copyEngine": true
 }
 
@@ -187,8 +187,8 @@ const fs = require('fs')
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   const alternativePaths = [
-    "prisma/client",
-    "client",
+    "generatedClient/@prisma/client",
+    "@prisma/client",
   ]
   
   const alternativePath = alternativePaths.find((altPath) => {
@@ -218,7 +218,7 @@ Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
-path.join(process.cwd(), "prisma/client/libquery_engine-debian-openssl-3.0.x.so.node")
+path.join(process.cwd(), "generatedClient/@prisma/client/libquery_engine-debian-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "prisma/client/schema.prisma")
+path.join(process.cwd(), "generatedClient/@prisma/client/schema.prisma")

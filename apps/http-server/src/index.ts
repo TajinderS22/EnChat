@@ -2,8 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import * as z from 'zod'
 import bcrypt from 'bcrypt'
-import {prisma}  from '@repo/db/prisma/lib/prisma'
-
+import { prisma } from '@repo/db';
 
 dotenv.config()
 
