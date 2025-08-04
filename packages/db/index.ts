@@ -1,1 +1,1 @@
-export * from './src/prisma.js';
+export * from './src/prisma';

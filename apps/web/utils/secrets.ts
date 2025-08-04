@@ -1,0 +1,1 @@
+export const HttpServerAddress='http://localhost:3030'

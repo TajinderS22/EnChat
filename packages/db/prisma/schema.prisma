@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generatedClient/@prisma/client"
 }
 
 datasource db {
@@ -15,24 +8,53 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String
+  id        Int            @id @default(autoincrement())
+  username  String         @unique
   firstname String
   lastname  String?
   password  String
   email     String
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
 
-  // relation to chats
-  chats Chats[]
+  Chatrooms ChatroomUsers[]
+  Messages  Messages[]
+
 }
 
-model Chats {
-  id      Int    @id @default(autoincrement())
-  userId  Int
-  message String
 
-  // Relating Chats to user {this  is  one to may relation}
+model Chatrooms{
+  id         Int            @id @default(autoincrement())
+  userId     Int  
+  createdAt  DateTime       @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  users      ChatroomUsers[]
+  messages   Messages[]
+  
 }
+
+model Messages{
+  id          Int         @id @default(autoincrement())
+  userId      Int 
+  chatroomId  Int
+  message     String
+  createdAt   DateTime    @default(now())
+
+  user        User        @relation(fields:[userId],references: [id])
+  chatroom    Chatrooms   @relation(fields: [chatroomId],references: [id])
+
+}
+
+model ChatroomUsers{
+  
+  chatroomId  Int
+  userId      Int
+  joinedAt    DateTime    @default(now())
+
+  user        User        @relation(fields: [userId],references:[id])
+  chatroom    Chatrooms   @relation(fields: [chatroomId],references: [id])
+  
+
+
+  @@id([userId, chatroomId])
+
+} 

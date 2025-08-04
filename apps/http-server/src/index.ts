@@ -3,22 +3,27 @@ import dotenv from 'dotenv'
 import * as z from 'zod'
 import bcrypt from 'bcrypt'
 import { prisma } from '@repo/db';
+import cors from 'cors'
 
 dotenv.config()
 
+
+
 const app=express();
 app.use(express.json())
+app.use(cors())
 
 
 
 const saltRounds=15;
 
 
-type UserType={
+export type UserType={
     firstname:string,
     lastname:string,
     username:string,
     email:string,
+    id?:number,
 }
 
 interface UserTypeBackend extends UserType{
@@ -43,6 +48,7 @@ app.post('/signup',async(req,res)=>{
     const userInput:UserTypeBackend=req.body
     const password=userInput.password
     const email=userInput.email
+    const username=userInput.username
 
     try{
         if(!emailRegex.test(email)){
@@ -62,6 +68,20 @@ app.post('/signup',async(req,res)=>{
 
         userInput.password= hashedPassword
 
+        const existingUser=await prisma.user.findFirst({
+            where:{
+                OR:[{
+                    email:email
+                },{username:username}]
+            }
+        })
+        if(existingUser){
+            res.status(400).json({
+                message:"User already registered please Sign-in"
+            })
+        }
+ 
+
 
         const data=zodUserSchema.parse(userInput)
 
@@ -70,7 +90,7 @@ app.post('/signup',async(req,res)=>{
         })
         if(response){
             res.status(200).json({
-                message:' user Registered success '
+                message:' user Registered successfully '
             })
         }
 
@@ -87,9 +107,53 @@ app.post('/signup',async(req,res)=>{
 
 })
 
+app.post("/signin",async(req,res)=>{
+    const {username,password}=req.body
+
+    try {
+        const existingUser= await prisma.user.findFirst({
+            where:{
+                username
+            }
+        })
+        console.log(existingUser)
+        console.log(existingUser)
+        if(existingUser){
+            const checkPassword:boolean=bcrypt.compareSync(password,existingUser?.password)
+            console.log(checkPassword)
+            if(checkPassword){
+                res.status(200).json({
+                    user:existingUser
+                })
+                return
+            }
+        }
+
+        res.status(404).json({
+            message:"User not found"
+        })
+
+    
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            message:"Internal Server Error"
+        })
+    }
 
 
-app.post('/chat',async(req,res)=>{
+})
+
+app.post('/user/chats',async(req,res)=>{
+    const {userId}=req.body
+    const chatRooms= await prisma.chatrooms.findMany({
+      where:{
+        userId:userId
+      }
+    })
+    res.status(200).json({
+        chatRooms
+    })
     
 })
 
