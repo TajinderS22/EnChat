@@ -53,7 +53,7 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
 
             if(parsed.type==='send_message'){
                 const {fromUserId,toUserId,message,message_type}=parsed
-
+                console.log(parsed)
                 
 
                 const existingChatRoom=await prisma.chatroomUsers.findFirst({
@@ -77,7 +77,6 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                 }else{
                     const newChatRoom= await prisma.chatrooms.create({
                         data:{
-                            userId:fromUserId,
                             users:{
                                 create:[
                                     {userId:fromUserId},

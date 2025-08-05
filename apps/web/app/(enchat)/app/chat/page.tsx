@@ -1,8 +1,8 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
-import { useSession,signOut } from 'next-auth/react'
+import { useSession, } from 'next-auth/react'
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react'
-import {prisma} from '@repo/db'
 import axios from 'axios';
 import LeftContainer from '../../../../components/chat/LeftContainer';
 import MainChatContainer from '../../../../components/chat/MainChatContainer';
@@ -27,7 +27,7 @@ const page = () => {
     dispatch(setUser(user))
 
 
-  },[session,router,status])
+  },[session,router,status,dispatch])
 
   if(status=="loading"){
     return(
@@ -36,15 +36,7 @@ const page = () => {
       </div>
     )
   }
-  console.log(User)
-  const getAllChatRooms=async()=>{
 
-    const chatRooms= await axios.post("http://localhost:3030/user/chats",{userId:User.id})
-    
-    console.log(chatRooms)
-
-  }
-  // getAllChatRooms()
   return (
     <div className='w-[98%] mx-auto flex max-w-[1536px]  h-[98svh] my-4 bg-gray-600 '>
       <LeftContainer/>

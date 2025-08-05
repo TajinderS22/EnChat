@@ -144,11 +144,52 @@ app.post("/signin",async(req,res)=>{
 
 })
 
-app.post('/user/chats',async(req,res)=>{
+
+app.post('/user/chatroom/chats',async(req ,res)=>{
+    const {chatroomId}=req.body;
+
+    const messages= await prisma.messages.findMany({
+        where:{
+            chatroom:{
+                id:chatroomId
+            }
+        },
+        take:100
+    });
+
+    res.status(200).json({
+        messages:messages
+    })
+})
+
+
+app.post('/user/chatrooms',async(req,res)=>{
     const {userId}=req.body
     const chatRooms= await prisma.chatrooms.findMany({
       where:{
-        userId:userId
+        users:{
+            some:{
+                userId:userId
+            }
+        }
+      },
+      select:{
+        id:true,
+        users:{
+            where:{
+                NOT:{
+                    userId:userId
+                }
+            },
+            select:{
+                user:{
+                    select:{
+                        id:true,
+                        username:true
+                    }
+                }
+            }
+        }
       }
     })
     res.status(200).json({
