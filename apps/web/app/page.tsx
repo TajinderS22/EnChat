@@ -7,16 +7,16 @@ export default function Home() {
 
   return (
     
-   <div className="max-w-[1920px]  mx-auto">
+   <div className="max-w-[1920px] min-h-[100svh] dark:bg-black bg-[#fafafa]  mx-auto">
     <div className="sticky top-0 w-full  backdrop-blur-2xl  z-10">
       <Navbar></Navbar>
     </div>
-    <div className={" min-h-[90svh] min-w-[90svw]  justify-center  "}>
+    <div className={" min-h-[600px] mx-auto w-[95%] min-w-[50svw] items-center flex  justify-center  "}>
       <div className=" w-11/12  mx-auto bg backdrop-blur-md  mt-24 rounded-lg ">
-        <div className=" text-4xl m-2 p-2  mt-18    text-purple-300">
+        <div className=" text-4xl m-2 p-2  mt-18 dark:text-teal-300  font-bold text-teal-700">
           Get free from all kind of tracking with EnChat
         </div>
-        <p className=" text-2xl m-2 p-2  mt-6  text-purple-400">
+        <p className=" text-2xl m-2 p-2  mt-6 dark:text-teal-400 font-semibold text-teal-600">
           Fully End 2 End Encrypted chat app
         </p>
 

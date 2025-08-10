@@ -11,7 +11,7 @@ export const Button = ({ text, buttonType, buttonClick }: ButtonProps) => {
   if(buttonType==='primary'){
     return (
     <button
-      className={`bg-purple-500 text-white p-2 border border-white rounded-lg`}
+      className={`bg-teal-500 text-white p-2 border border-white rounded-lg`}
       onClick={() => buttonClick && buttonClick()}
     >
       {text}

@@ -1,6 +1,7 @@
   import axios from "axios";
   import NextAuth, { NextAuthOptions } from "next-auth";
   import  CredentialsProvider  from "next-auth/providers/credentials";
+import { HttpServerAddress } from "../../../../utils/secrets";
 
 
 
@@ -15,7 +16,7 @@
         },
         async authorize(credentials,req){
           try {
-            const response = await axios.post("http://localhost:3030/signin", {
+            const response = await axios.post(HttpServerAddress+"/signin", {
               username: credentials?.username,
               password: credentials?.password,
             });

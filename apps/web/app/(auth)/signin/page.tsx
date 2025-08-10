@@ -47,7 +47,7 @@ const Signin = () => {
   };
 
   return (
-    <div className="max-w-[1920px] mx-auto min-w-screen flex flex-col items-center">
+    <div className=" flex flex-col items-center">
       {errorMessage && (
         <div className="fixed top-5 bg-red-200 text-black px-4 py-2 
         rounded shadow-md z-50
@@ -57,10 +57,10 @@ const Signin = () => {
         </div>
       )}
 
-      <div className="flex max-w-[1920px] mx-auto items-center justify-center min-h-screen">
-        <div className="bg-purple-300/10 w-[330px] h-fit p-4 pt-0 rounded-lg">
-          <div className="text-2xl text-purple-300 my-4">
-            Sign in to your chats
+      <div className="flex  max-w-[1920px] mx-auto items-center justify-center min-h-screen">
+        <div className="bg-teal-300/10 w-[330px] h-fit p-4 pt-0 rounded-lg">
+          <div className="text-2xl dark:text-teal-300 text-teal-600 font-bold my-4">
+            Sign in to Your chats
           </div>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <input
@@ -77,7 +77,7 @@ const Signin = () => {
             />
             <div className="w-11/12 m-2 flex justify-end">
               <input
-                className="bg-gray-700 p-2 rounded-lg"
+                className="bg-teal-700 p-2 text-[#fafafa] rounded-lg"
                 type="submit"
                 value="Sign In"
               />
@@ -90,6 +90,6 @@ const Signin = () => {
 };
 
 const inputboxClass =
-  "p-2 m-2 my-4 bg-gray-700 shadow-sm border-2 border-purple-100 shadow-purple-300 rounded-lg";
+  "p-2 m-2 my-4 dark:bg-gray-700 shadow-sm border-2 dark:border-teal-100 dark:shadow-teal-300 rounded-lg";
 
 export default Signin;

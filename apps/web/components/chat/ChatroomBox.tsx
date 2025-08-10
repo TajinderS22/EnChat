@@ -1,12 +1,16 @@
 
 import React from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { setActiveChatRoom } from '../../redux/slices/ActiveChatRoom'
 import { setActiveChatUser } from '../../redux/slices/ActiveChatUser'
+import { clearNewMessage } from '../../redux/slices/NewMessageChatRoom'
+import { RootState } from '../../redux/store'
 
-type user={
+export type user={
     id:number,
-    username:string
+    username:string,
+    firstname:string,
+    lastname:string
     
 }
 
@@ -18,40 +22,62 @@ type ChatRoom={
 }
 
 type ChatRoomBoxType={
-    chatRoom:ChatRoom
+    chatRoom:ChatRoom,
+    newMessageChatId:number
 }
 
 
-const ChatroomBox = ({chatRoom}:ChatRoomBoxType) => {
+const ChatroomBox = ({chatRoom,newMessageChatId}:ChatRoomBoxType) => {
     const {id,users}=chatRoom
 
     const dispatch=useDispatch()
 
 
+
+
     // const ActiveChatUser=useSelector((state:RootState)=>state.ActiveChatUser)
-    // const ActiveChatRoom=useSelector((state:RootState)=>state.ActiveChatRoom)
+    const ActiveChatRoom=useSelector((state:RootState)=>state.ActiveChatRoom)
 
     
     const user=users[0]?.user
-    console.log(user)
+    // console.log(user)
 
   return (
-    <div className='flex border-b bg-gray-200/20 rounded-lg flex-col m-2 p-2 h-18'
+    <div className={`flex border-b bg-teal-200/20 ${id==ActiveChatRoom&& ' bg-teal-400/60 '} rounded-lg 
+     m-2 p-2 h-18
+    hover:shadow-md hover:-translate-y-0.5 shadow-teal-200
+    transform duration
+    items-center
+    
+    `}
     onClick={()=>{
         if(id){
             dispatch(setActiveChatRoom(id))
+            dispatch(setActiveChatUser(user))
         }else{
-            dispatch(setActiveChatUser(user?.id))
+            dispatch(setActiveChatUser(user))
         }
+
+        dispatch(clearNewMessage())
+
     }}
     >
-        <div>
-            {user?.username}
+        <div className='flex-1'>
+            <div className='text-xl font-semibold' >
+            {user?.firstname+" "+user?.lastname}
+            </div>
+
+            <div className='text-sm' >
+                {user?.username}
+            </div>
         </div>
 
-        <div>
-            Status will be added here 
-        </div>
+        {
+            newMessageChatId==id&&
+            <div className='w-6 h-6 bg-green-200 rounded-full'>
+                N
+            </div>
+        }
 
     </div>
   )

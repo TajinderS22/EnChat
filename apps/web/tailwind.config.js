@@ -6,7 +6,7 @@ export default {
     '../../packages/ui/**/*.{js,ts,jsx,tsx}', // 👈 this is key
   ],
   safelist: [
-    'bg-purple-500',
+    'bg-teal-500',
     'hover:bg-purple-600',
     'text-white',
     'p-2',
@@ -17,6 +17,7 @@ export default {
     'focus:ring-2',
     'focus:ring-purple-300',
     'transition-colors',
+    "bg-gray-400"
   ],
    theme: {
     extend: {

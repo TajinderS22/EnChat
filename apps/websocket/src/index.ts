@@ -52,11 +52,13 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
             }
 
             if(parsed.type==='send_message'){
-                const {fromUserId,toUserId,message,message_type}=parsed
+                const {fromUserId,toUserId,message,message_type,chatroomIdFe}=parsed
                 console.log(parsed)
                 
+                let chatroomId=chatroomIdFe
 
-                const existingChatRoom=await prisma.chatroomUsers.findFirst({
+                if(!chatroomId){
+                    const existingChatRoom=await prisma.chatroomUsers.findFirst({
                     where:{
                         userId:fromUserId,
                         chatroom:{
@@ -86,6 +88,9 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                         }
                     })
                     chatroomId=newChatRoom.id
+
+                    console.log(chatroomId)
+                }
                 }
                 
                 messagesToBeSaved.push({
@@ -96,13 +101,21 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                 })
                 
 
-                // checking if reciver is online on socket 
+               
                 const recipientSocket=onlineUsers.get(toUserId)
 
+                ws.send(JSON.stringify({
+                    type:'receive_message',
+                    userId:fromUserId,
+                    chatroomId,
+                    message,
+                }))
+
+                //  checking if reciver is online on socket 
                 if(recipientSocket&& recipientSocket.readyState==WebSocket.OPEN){
                     recipientSocket.send(JSON.stringify({
                         type:'receive_message',
-                        fromUserId,
+                        userId:fromUserId,
                         chatroomId,
                         message,
 
