@@ -51,8 +51,28 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                 return
             }
 
+            if (parsed.type === "EncryptedAES") {
+              const recipient = onlineUsers.get(parsed.to);
+                        
+              // only forward if recipient exists AND is not the sender
+              if (recipient && parsed.to !== parsed.from) {
+                recipient.send(JSON.stringify(parsed));
+              }
+            }
+            
+
+            if (parsed.type === "publicKey") {
+              if (onlineUsers.get(parsed.to)) {
+                onlineUsers.get(parsed.to).send(JSON.stringify({
+                  type: "publicKey",
+                  from: parsed.from,
+                  publicKey: parsed.publicKey
+                }));
+              }
+            }
+
             if(parsed.type==='send_message'){
-                const {fromUserId,toUserId,message,message_type,chatroomIdFe}=parsed
+                const {fromUserId,toUserId,message,message_type,chatroomIdFe,iv,tag}=parsed
                 console.log(parsed)
                 
                 let chatroomId=chatroomIdFe
@@ -96,7 +116,9 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                 messagesToBeSaved.push({
                     userId:fromUserId,
                     chatroomId,
-                    message
+                    message,
+                    iv,
+                    tag
 
                 })
                 
@@ -109,6 +131,8 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                     userId:fromUserId,
                     chatroomId,
                     message,
+                    iv,
+                    tag
                 }))
 
                 //  checking if reciver is online on socket 
@@ -118,6 +142,8 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                         userId:fromUserId,
                         chatroomId,
                         message,
+                        iv,
+                        tag
 
                     }))
                 }

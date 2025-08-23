@@ -10,6 +10,8 @@ import { clearErrorMessage, setErrorMessage } from '../../redux/slices/ErrorMess
 import { removeNewMessage, setNewMessage } from '../../redux/slices/NewMessageChatRoom'
 import BG from '../icons/BG'
 import { HttpServerAddress } from '../../utils/secrets'
+import {generateRSAKeys,generateAESKey,encryptAESKey,decryptAESKey, encryptMessage, decryptMessage} from '@repo/encryption/'
+import { error } from 'console'
 
 
 interface RootStateL {
@@ -30,12 +32,16 @@ const MainChatContainer = () => {
     const dispatch=useDispatch()
 
     const ActiveChatRoom=useSelector((state:RootState)=>state.ActiveChatRoom)
+    const publicKey=useSelector((state:RootState)=>state.PublicKey)
+    const privateKey=useSelector((state:RootState)=>state.PrivateKey)
 
     const [AllMessages,setAllMessages]=useState<any[]>([])
     //@ts-ignore
     const ActiveChatUser=useSelector<RootStateL,user>((state:RootState)=> state.ActiveChatUser)
     const [displayMessages,setDisplayMessages]=useState<any[]>([])
     // console.log(ActiveChatRoom)
+
+    const [AES,setAES]=useState(null)
 
     const User=useSelector((state:RootState)=>state.user)
 
@@ -47,6 +53,39 @@ const MainChatContainer = () => {
             message:sendMessageRef?.current?.value,
             chatroomIdFe:ActiveChatRoom    
         }
+
+        // function base64ToArrayBuffer(base64: any): any {
+        //   const binaryString = atob(base64);
+        //   const len = binaryString.length;
+        //   const bytes = new Uint8Array(len);
+        //   for (let i = 0; i < len; i++) {
+        //     bytes[i] = binaryString.charCodeAt(i);
+        //   }
+        //   return bytes;
+        // }
+
+        async function encryptMessage(message: string|undefined, aesKey: CryptoKey|null) {
+          if(!aesKey){
+            throw new Error("AES Key is not avialable")
+          }
+          const iv = crypto.getRandomValues(new Uint8Array(12))
+          const encoded = new TextEncoder().encode(message)
+
+          const ciphertext = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv },
+            aesKey,
+            encoded
+          )
+        
+          return {
+            content: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+            iv: btoa(String.fromCharCode(...iv)),
+          }
+        }
+
+        console.log(AES)
+        const encryptedMessage= await encryptMessage(MessageData.message,AES)
+        console.log(encryptedMessage)
         if(MessageData.message==' '||''){
             dispatch(setErrorMessage("Please enter some message"))
             setTimeout(()=>{
@@ -82,38 +121,79 @@ const MainChatContainer = () => {
       )
       );
     },[displayMessages])
+useEffect(() => {
+  if (!User.id) return;
 
+  const setup = async () => {
+    
 
+    wsRef.current = new WebSocket("ws://localhost:8080")
 
-
-    useEffect(()=>{
-
-        if(!User.id) return;
-
-        wsRef.current=new WebSocket('ws://localhost:8080')
-
-        wsRef.current.onopen=()=>{
-            if(wsRef.current && User.id && wsRef.current?.readyState === WebSocket.OPEN ){
-                wsRef.current?.send(JSON.stringify({
-                type:"register",
-                userId:User.id
-            }))
-            }
+    wsRef.current.onopen = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "register",
+            userId: User.id,
+          })
+        )
+        if(publicKey){
+          wsRef.current.send(
+          JSON.stringify({
+            type: "publicKey",
+            to: ActiveChatUser?.id,
+            chatroomId: ActiveChatRoom,
+            from: User.id,
+            publicKey, 
+          })
+        )
         }
+      }
+    }
+
+    wsRef.current.onmessage = async (event) => {
+      const newMessage = JSON.parse(event.data)
+
+      
+      if (newMessage.type === "publicKey") {
         
-        wsRef.current.onmessage=async (event)=>{
-            const newMessage = JSON.parse(event.data);
-            console.log(newMessage.chatroomId)
-            setAllMessages((prev)=>[...prev,newMessage])
-            dispatch(setNewMessage([newMessage.chatroomId]))  
-            
-            
-        }
+        const AESKey = await generateAESKey(ActiveChatRoom, [User.id, newMessage.from])
+        console.log(AESKey)
+        const EncryptedAESKey = await encryptAESKey(AESKey, newMessage.publicKey)
+        setAES(EncryptedAESKey)
+        // console.log(newMessage.publicKey)
+
+        wsRef.current?.send(
+          JSON.stringify({
+            type: "EncryptedAES",
+            from: User.id,
+            to: newMessage.from,
+            AES: EncryptedAESKey,
+          })
+        )
+      }
+
+      // async function cryptoKeyToString(key:CryptoKey) {
+      //   const raw = await crypto.subtle.exportKey("raw", key)
+      //   return btoa(String.fromCharCode(...new Uint8Array(raw)))
+      // }
+
+      if (newMessage.type === "EncryptedAES" && newMessage.from!=User.id) {
+        const decrypted = await decryptAESKey(newMessage.AES,privateKey)
+        // const aeskey=await cryptoKeyToString(decrypted)
+        // console.log(aeskey)
+        setAES(decrypted)
+      }
+
+      setAllMessages((prev) => [...prev, newMessage])
+      dispatch(setNewMessage([newMessage.chatroomId]))
+    }
+  }
+
+  setup()
+}, [User, ActiveChatUser?.id, ActiveChatRoom])
 
 
-    },[User,ActiveChatRoom])
-
-    console.log("All Messages ",AllMessages)
     useEffect(()=>{
         if(ActiveChatRoom){
             setCurrentChatMessagesLoading(true)
@@ -156,7 +236,7 @@ const MainChatContainer = () => {
         </div>
 
         {
-            currentChatMessagesLoading?
+            currentChatMessagesLoading&&AES?
             <Loading/>
             :
             <div className='flex-1 overflow-y-scroll px-4  '>

@@ -5,6 +5,9 @@ import ActiveChatUserReducer from './slices/ActiveChatUser'
 import ActiveChatRoomReducer from './slices/ActiveChatRoom'
 import ErrorMessageReducer from './slices/ErrorMessageSlice'
 import NewMessageReducer from './slices/NewMessageChatRoom'
+import PublicKeyReducer from './slices/publicKey'
+import PrivateKeyReducer from './slices/PrivateKey'
+
 
 export const store=configureStore({
     reducer:{
@@ -13,7 +16,9 @@ export const store=configureStore({
         ActiveChatUser:ActiveChatUserReducer,
         ActiveChatRoom:ActiveChatRoomReducer,
         ErrorMessage:ErrorMessageReducer,
-        NewMessage:NewMessageReducer
+        NewMessage:NewMessageReducer,
+        PublicKey:PublicKeyReducer,
+        PrivateKey:PrivateKeyReducer
         
     }
 })
