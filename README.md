@@ -1,4 +1,4 @@
-git add *# EnChat
+
 
 A minimalist and efficient chat application built with modern web technologies.
 
