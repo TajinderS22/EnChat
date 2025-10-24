@@ -19,11 +19,9 @@ jobs:
             with:
                 node-version: 22
         -   name: Install Dependencies
-            working-directory: EnChat
             run: pwd && npm install
 
         -   name: Build The app
-            working-directory: EnChat
             run: npm run build
 
         -   name: Upload build to server
