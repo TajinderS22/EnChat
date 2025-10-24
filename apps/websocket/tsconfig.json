@@ -2,6 +2,11 @@
   "extends": "@repo/typescript-config/backend.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "@repo/db": ["../../packages/db/src"],
+      "@repo/encryption": ["../../packages/encryption/src"],
+      "@repo/ui": ["../../packages/ui/src"]
+    }
   }
 }
