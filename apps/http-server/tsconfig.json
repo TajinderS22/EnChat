@@ -8,7 +8,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true
+    "declaration": true,
+    "paths": {
+      "@repo/db": ["../../packages/db/src"],
+      "@repo/encryption": ["../../packages/encryption/src"],
+      "@repo/ui": ["../../packages/ui/src"]
+    }
   },
   "include": ["src", "index.ts"]
 }
