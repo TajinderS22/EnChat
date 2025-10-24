@@ -4,16 +4,18 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "paths": {
-      "@repo/db": ["../../packages/db/src"],
-      "@repo/encryption": ["../../packages/encryption/src"],
-      "@repo/ui": ["../../packages/ui/src"]
-    }
+    "composite": true
   },
-  "include": ["src", "index.ts"]
+  "include": ["src", "index.ts"],
+  "references": [
+    { "path": "../../packages/db" },
+    { "path": "../../packages/encryption" },
+    { "path": "../../packages/ui" }
+  ]
 }
