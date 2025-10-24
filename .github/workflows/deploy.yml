@@ -1,0 +1,43 @@
+name: Deploy on Production
+
+on:
+    push:
+        branches:
+            - main
+
+
+jobs:
+   deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+        -   name: Checkout repo
+            uses: actions/checkout@v3
+
+        -   name: Setup Nodejs
+            uses: actions/setup-node@v3
+            with:
+                node-version: 22
+        -   name: Install Dependencies
+            working-directory: EnChat
+            run: npm install
+
+        -   name: Build The app
+            working-directory: EnChat
+            run: npm run build
+
+        -   name: Upload build to server
+            env:
+              HOST: ${{ secrets.PROD_HOST }}
+              USER: ${{ secrets.PROD_USER }}
+              KEY: ${{ secrets.PROD_SSH_KEY }}
+            run: |
+              echo "$KEY" > key.pem
+              chmod 600 key.pem
+            
+              rsync -avz --delete -e "ssh -i key.pem -o StrictHostKeyChecking=no" ./EnChat/apps/web/.next $USER@$HOST:/tmp/Enchat-temp/apps/web/.next
+            
+              ssh -i key.pem -o StrictHostKeyChecking=no $USER@$HOST "sudo rsync -avz --delete /tmp/Enchat-temp/apps/web/.next /home/azureuser/Enchat/apps/web/.next && sudo rm -rf /tmp/EcChat-temp/apps/web/.next"
+            
+        
+        
