@@ -7,9 +7,17 @@ const Navbar = () => {
     hover:shadow-lg hover:bg-teal-200/70 shadow-teal-400/60 dark:hover:bg-teal-300/20
     max-w-[1920px]
     tranform duration-220
+    justify-between
     '>
         <div className='text-3xl dark:text-[#cccccc] text-black font-bold' >
             Enchat
+        </div>
+
+        <div className="list-none flex gap-6 items-center pr-6">
+          <li>Home</li>
+          <li>AboutUs</li>
+          <li>ContactUs</li>
+          <li>GetStarted</li>
         </div>
 
     </div>

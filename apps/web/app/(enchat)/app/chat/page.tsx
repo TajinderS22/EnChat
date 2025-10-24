@@ -11,9 +11,7 @@ import { RootState } from '../../../../redux/store';
 import { setUser } from '../../../../redux/slices/userSlice';
 import Alert from '../../../../components/Alert';
 import Loading from '../../../../components/Loading';
-import { generateRSAKeys } from '@repo/encryption';
-import { setPublicKey } from '../../../../redux/slices/publicKey';
-import { setPrivateKey } from '../../../../redux/slices/PrivateKey';
+
 
 const page = () => {
   const router=useRouter()
@@ -25,11 +23,7 @@ const page = () => {
 
   const { data: session, status } = useSession();
 
-  const getKeys=async()=>{
-    const {publicKey,privateKey}=await generateRSAKeys()
-    dispatch(setPublicKey(publicKey))
-    dispatch(setPrivateKey(privateKey))
-  }
+  
 
   useEffect(()=>{
     if(status=='unauthenticated'){
@@ -37,7 +31,6 @@ const page = () => {
     }
     // @ts-ignore
     const user=session?.user?.user 
-    getKeys()    
     dispatch(setUser(user))
 
 

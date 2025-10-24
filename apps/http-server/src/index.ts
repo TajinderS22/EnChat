@@ -1,14 +1,16 @@
 import express from 'express'
-import dotenv from 'dotenv'
 import * as z from 'zod'
 import bcrypt from 'bcrypt'
 import { prisma } from '@repo/db';
 import cors from 'cors'
 
-dotenv.config()
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 
-
+console.log(path.resolve(process.cwd()))
 const app=express();
 app.use(express.json())
 app.use(cors())
@@ -36,10 +38,12 @@ const zodUserSchema=z.object({
     username:z.string(),
     email:z.string(),
     password: z.string(),
+    publicKey: z.string()
 })
 
 
 const port = process.env.HTTP_SERVER_PORT || 3030
+
 
 app.post('/signup',async(req,res)=>{
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -65,6 +69,7 @@ app.post('/signup',async(req,res)=>{
         }
 
         const hashedPassword=await bcrypt.hashSync(password,saltRounds)
+        
 
         userInput.password= hashedPassword
 
@@ -90,13 +95,14 @@ app.post('/signup',async(req,res)=>{
         })
         if(response){
             res.status(200).json({
-                message:' user Registered successfully '
+                message:' user Registered successfully ',
+                response
             })
         }
 
 
     }catch(e){
-        console.log(e)
+        console.error(e)
         res.status(500).json({
             message :"Internal server error. "
         })
@@ -130,7 +136,7 @@ app.post("/user/find_user",async(req,res )=>{
     })
 
    } catch (error) {
-    console.log(error)
+    console.error(error)
     res.status(500).json({
         message :"Internal Server Error"
     })
@@ -138,6 +144,24 @@ app.post("/user/find_user",async(req,res )=>{
 
 
 
+})
+
+app.post("/create/chatroom",async(req,res)=>{
+    const {fromUserId,toUserId}= req.body
+    const newChatRoom= await prisma.chatrooms.create({
+        data:{
+            users:{
+                create:[
+                    {userId:fromUserId},
+                    {userId:toUserId}
+                ]
+            }
+        }
+    }) 
+    const chatroomId=newChatRoom.id
+    res.status(200).json({
+        chatroomId
+    })
 })
 
 app.post("/signin",async(req,res)=>{
@@ -149,11 +173,8 @@ app.post("/signin",async(req,res)=>{
                 username
             }
         })
-        console.log(existingUser)
-        console.log(existingUser)
         if(existingUser){
             const checkPassword:boolean=bcrypt.compareSync(password,existingUser?.password)
-            console.log(checkPassword)
             if(checkPassword){
                 res.status(200).json({
                     user:existingUser
@@ -168,7 +189,7 @@ app.post("/signin",async(req,res)=>{
 
     
     } catch (error) {
-        console.log(error)
+        console.error(error)
         res.status(500).json({
             message:"Internal Server Error"
         })
@@ -180,6 +201,9 @@ app.post("/signin",async(req,res)=>{
 
 app.post('/user/chatroom/chats',async(req ,res)=>{
     const {chatroomId}=req.body;
+
+    console.log(chatroomId)
+
 
     const messages= await prisma.messages.findMany({
         where:{
@@ -220,7 +244,9 @@ app.post('/user/chatrooms',async(req,res)=>{
                         id:true,
                         username:true,
                         firstname:true,
-                        lastname:true
+                        lastname:true,
+                        email:true,
+                        publicKey:true
                     }
                 }
             }
@@ -233,13 +259,62 @@ app.post('/user/chatrooms',async(req,res)=>{
     
 })
 
+app.post('/user/privateCredentials', async(req,res)=>{
+    const data=req.body;
+    const result= await  prisma.privateKey.create({data});
+
+    res.status(200).json({
+        message:`${result.userId} has registered Pk`
+    })
+    
+})
+
+app.get('/user/privateCredentials',async(req,res)=>{
+    const id = req.query.id;
+
+    
+
+    const userId=Number(id);
+
+    if(!userId){
+        res.status(400).json({
+            message:"no user Found"
+        })
+        return
+    }
 
 
+    try {
+        if(userId){
+            const result= await prisma.privateKey.findFirst({
+            where:{
+                userId,
+            },
+            include:{
+                user:{select:{
+                    password:true
+                }}
+            }
+            
+        })
+            res.status(200).json({
+                result
+            })
+        }
+    } catch (error) {
+        res.status(500).json({
+            message:"Internal server Error"
+        })
+    }
 
-app.listen(port,()=>{
-    console.log(`http Server running on ${port} port.`)
+    
 })
 
 
-console.log(process.env.HTTP_SERVER_PORT)
+app.listen(port,()=>{
+    console.error(`http Server running on ${port} port.`)
+})
+
+
+console.error(process.env.HTTP_SERVER_PORT)
 

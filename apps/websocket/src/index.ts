@@ -2,7 +2,9 @@ import WebSocket, {WebSocketServer} from 'ws'
 import dotenv from 'dotenv'
 import {prisma} from "@repo/db"
 
-dotenv.config()
+
+dotenv.config({path:'../../../.env'})
+
 
 interface extendedWebSocket extends WebSocket{
     userId?:string
@@ -37,17 +39,16 @@ setInterval(async ()=>{
 }
 
 wss.on("connection",async (ws:extendedWebSocket)=>{
-    console.log("new client connection")
 
     ws.on('message',async(data)=>{
         try {
             const parsed=JSON.parse(data.toString())
 
+
             if (parsed.type==='register'){
                 const userId=parsed.userId
                 onlineUsers.set(userId,ws)
                 ws.userId=userId
-                console.log('user '+ userId +" Registered")
                 return
             }
 
@@ -59,21 +60,9 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                 recipient.send(JSON.stringify(parsed));
               }
             }
-            
-
-            if (parsed.type === "publicKey") {
-              if (onlineUsers.get(parsed.to)) {
-                onlineUsers.get(parsed.to).send(JSON.stringify({
-                  type: "publicKey",
-                  from: parsed.from,
-                  publicKey: parsed.publicKey
-                }));
-              }
-            }
 
             if(parsed.type==='send_message'){
-                const {fromUserId,toUserId,message,message_type,chatroomIdFe,iv,tag}=parsed
-                console.log(parsed)
+                const {fromUserId,toUserId,message,message_type,messageFromSender,chatroomIdFe,iv,tag}=parsed
                 
                 let chatroomId=chatroomIdFe
 
@@ -92,35 +81,68 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                     select:{
                         chatroomId:true
                     }
-                })
-                let chatroomId
-                if(existingChatRoom){
-                    chatroomId=existingChatRoom.chatroomId
-                }else{
-                    const newChatRoom= await prisma.chatrooms.create({
-                        data:{
-                            users:{
-                                create:[
-                                    {userId:fromUserId},
-                                    {userId:toUserId}
-                                ]
-                            }
-                        }
                     })
-                    chatroomId=newChatRoom.id
+                    if(existingChatRoom){
+                        chatroomId=existingChatRoom.chatroomId
+                        messagesToBeSaved.push({
+                            userId:fromUserId,
+                            chatroomId,
+                            message,
+                            messageFromSender
+                        })
 
-                    console.log(chatroomId)
-                }
+                    }else{
+                        const newChatRoom= await prisma.chatrooms.create({
+                            data:{
+                                users:{
+                                    create:[
+                                        {userId:fromUserId},
+                                        {userId:toUserId}
+                                    ]
+                                }
+                            }
+                        }) 
+                        chatroomId=newChatRoom.id
+
+                        const messageChatId=JSON.stringify({
+                            type:"ChatroomId",
+                            chatroomId
+                        })
+
+                        const sendMessageToUsers = (userIds: string[], message: string) => {
+                          userIds.forEach((userId) => {
+                            const ws = onlineUsers.get(userId);
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                              ws.send(message); 
+                              console.log(`Message sent to user ${userId}`);
+                            } else {
+                              console.log(`User ${userId} is not online or WebSocket is not open.`);
+                            }
+                          });
+                        };
+
+                        sendMessageToUsers([fromUserId,toUserId],messageChatId)
+                        
+                        
+                        messagesToBeSaved.push({
+                            userId:fromUserId,
+                            chatroomId,
+                            message,
+                            messageFromSender
+                        })
+                        sendMessagesImmediate()
+
+                    }
                 }
                 
+
                 messagesToBeSaved.push({
                     userId:fromUserId,
                     chatroomId,
                     message,
-                    iv,
-                    tag
-
+                    messageFromSender
                 })
+                
                 
 
                
@@ -131,8 +153,7 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                     userId:fromUserId,
                     chatroomId,
                     message,
-                    iv,
-                    tag
+                    messageFromSender
                 }))
 
                 //  checking if reciver is online on socket 
@@ -142,9 +163,7 @@ wss.on("connection",async (ws:extendedWebSocket)=>{
                         userId:fromUserId,
                         chatroomId,
                         message,
-                        iv,
-                        tag
-
+                        messageFromSender
                     }))
                 }
 

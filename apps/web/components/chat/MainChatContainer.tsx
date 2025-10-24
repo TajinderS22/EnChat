@@ -9,15 +9,22 @@ import Loading from '../Loading'
 import { clearErrorMessage, setErrorMessage } from '../../redux/slices/ErrorMessageSlice'
 import { removeNewMessage, setNewMessage } from '../../redux/slices/NewMessageChatRoom'
 import BG from '../icons/BG'
+import { decryptMessage, decryptPrivateKeyWithPassword, encryptMessage } from '@repo/encryption/dist'
+import { useRouter } from 'next/navigation'
+import { current } from '@reduxjs/toolkit'
 import { HttpServerAddress } from '../../utils/secrets'
-import {generateRSAKeys,generateAESKey,encryptAESKey,decryptAESKey, encryptMessage, decryptMessage} from '@repo/encryption/'
-import { error } from 'console'
+
+
 
 
 interface RootStateL {
 
   ActiveChatUser: user | null;
 
+}
+
+interface MessageBubbleTypeMain extends MessageBubbleType{
+  messageFromSender:string
 }
 
 const MainChatContainer = () => {
@@ -27,65 +34,43 @@ const MainChatContainer = () => {
     const [wsMessage,setWsMessage]=useState<any>(null)
     const [currentChatMessagesLoading,setCurrentChatMessagesLoading]=useState(true)
 
+    const router=useRouter()
+
     const NewMessage=useSelector((state:RootState)=>state.NewMessage)
 
     const dispatch=useDispatch()
 
     const ActiveChatRoom=useSelector((state:RootState)=>state.ActiveChatRoom)
-    const publicKey=useSelector((state:RootState)=>state.PublicKey)
-    const privateKey=useSelector((state:RootState)=>state.PrivateKey)
-
     const [AllMessages,setAllMessages]=useState<any[]>([])
     //@ts-ignore
     const ActiveChatUser=useSelector<RootStateL,user>((state:RootState)=> state.ActiveChatUser)
-    const [displayMessages,setDisplayMessages]=useState<any[]>([])
-    // console.log(ActiveChatRoom)
+    
 
-    const [AES,setAES]=useState(null)
+    const publicKey=ActiveChatUser?.publicKey;
+    const [displayMessages,setDisplayMessages]=useState<any[]>([])
+
+    const [privateKey,setPrivateKey]=useState(null)
 
     const User=useSelector((state:RootState)=>state.user)
 
     const handleSendMessageClick=async()=>{
+        
+        if(!publicKey){
+          return
+        }
+        if(sendMessageRef?.current?.value==""|| sendMessageRef?.current?.value==' '){
+          return null;
+        }
+        const encryptedMessage= await encryptMessage(sendMessageRef?.current?.value,publicKey)
+        const encryptedMessageFromSender = await encryptMessage(sendMessageRef?.current?.value,User.publicKey)
         const MessageData={
             type:'send_message',
             fromUserId:User.id,
             toUserId:ActiveChatUser.id,
-            message:sendMessageRef?.current?.value,
+            message:encryptedMessage,
+            messageFromSender:encryptedMessageFromSender,
             chatroomIdFe:ActiveChatRoom    
         }
-
-        // function base64ToArrayBuffer(base64: any): any {
-        //   const binaryString = atob(base64);
-        //   const len = binaryString.length;
-        //   const bytes = new Uint8Array(len);
-        //   for (let i = 0; i < len; i++) {
-        //     bytes[i] = binaryString.charCodeAt(i);
-        //   }
-        //   return bytes;
-        // }
-
-        async function encryptMessage(message: string|undefined, aesKey: CryptoKey|null) {
-          if(!aesKey){
-            throw new Error("AES Key is not avialable")
-          }
-          const iv = crypto.getRandomValues(new Uint8Array(12))
-          const encoded = new TextEncoder().encode(message)
-
-          const ciphertext = await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            aesKey,
-            encoded
-          )
-        
-          return {
-            content: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-            iv: btoa(String.fromCharCode(...iv)),
-          }
-        }
-
-        console.log(AES)
-        const encryptedMessage= await encryptMessage(MessageData.message,AES)
-        console.log(encryptedMessage)
         if(MessageData.message==' '||''){
             dispatch(setErrorMessage("Please enter some message"))
             setTimeout(()=>{
@@ -103,8 +88,7 @@ const MainChatContainer = () => {
 
     const getCurrentChatMessages=async()=>{
         const response= await axios.post(HttpServerAddress+"/user/chatroom/chats",{chatroomId:ActiveChatRoom})
-        // console.log(ActiveChatRoom)
-        if(response.status==200){
+        if(response){
             setCurrentChatMessagesLoading(false)
         }
         setDisplayMessages(response?.data?.messages)
@@ -121,6 +105,30 @@ const MainChatContainer = () => {
       )
       );
     },[displayMessages])
+
+    const getPrivateKeyFromServer=async()=>{
+      if(!User.id) return null;
+      const response=await axios.get(HttpServerAddress+"/user/privateCredentials",{
+        params:{
+          id:User.id
+        }
+      })
+
+      const PrivateKeyData=response.data.result;
+
+      const encrypted_key=PrivateKeyData.encrypted_key;
+      const iv=PrivateKeyData.iv;
+      const password=PrivateKeyData.user.password;
+      const salt=PrivateKeyData.salt;
+
+      const privateKey= await decryptPrivateKeyWithPassword(encrypted_key,iv,password,salt)
+      setPrivateKey(privateKey)
+    }
+
+    useEffect(()=>{
+      getPrivateKeyFromServer()
+
+    },[User])
 useEffect(() => {
   if (!User.id) return;
 
@@ -137,54 +145,16 @@ useEffect(() => {
             userId: User.id,
           })
         )
-        if(publicKey){
-          wsRef.current.send(
-          JSON.stringify({
-            type: "publicKey",
-            to: ActiveChatUser?.id,
-            chatroomId: ActiveChatRoom,
-            from: User.id,
-            publicKey, 
-          })
-        )
-        }
       }
     }
 
     wsRef.current.onmessage = async (event) => {
       const newMessage = JSON.parse(event.data)
+      if(newMessage.type=='ChatroomId'){
 
-      
-      if (newMessage.type === "publicKey") {
-        
-        const AESKey = await generateAESKey(ActiveChatRoom, [User.id, newMessage.from])
-        console.log(AESKey)
-        const EncryptedAESKey = await encryptAESKey(AESKey, newMessage.publicKey)
-        setAES(EncryptedAESKey)
-        // console.log(newMessage.publicKey)
-
-        wsRef.current?.send(
-          JSON.stringify({
-            type: "EncryptedAES",
-            from: User.id,
-            to: newMessage.from,
-            AES: EncryptedAESKey,
-          })
-        )
+        dispatch(setActiveChatRoom(newMessage.chatroomId))
+        return null
       }
-
-      // async function cryptoKeyToString(key:CryptoKey) {
-      //   const raw = await crypto.subtle.exportKey("raw", key)
-      //   return btoa(String.fromCharCode(...new Uint8Array(raw)))
-      // }
-
-      if (newMessage.type === "EncryptedAES" && newMessage.from!=User.id) {
-        const decrypted = await decryptAESKey(newMessage.AES,privateKey)
-        // const aeskey=await cryptoKeyToString(decrypted)
-        // console.log(aeskey)
-        setAES(decrypted)
-      }
-
       setAllMessages((prev) => [...prev, newMessage])
       dispatch(setNewMessage([newMessage.chatroomId]))
     }
@@ -224,10 +194,12 @@ useEffect(() => {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [displayMessages,AllMessages]); 
 
+    
+
   return (
-  <div className="w-full dark:bg-[url('/wavey-fingerprint.svg')] bg-no-repeat bg-cover">      
-        {ActiveChatRoom ?
-        < div className='flex-1 flex flex-col pt-4 h-full'>
+  <div className="max-w-[90%] w-[80%] dark:bg-[url('/wavey-fingerprint.svg')] bg-no-repeat bg-cover">      
+        {ActiveChatUser?
+        < div className=' flex flex-col pt-4 h-full'>
 
         <div className='bg-[#5ecfc6] dark:bg-teal-400/80 flex w-[95%] p-4 mx-auto rounded-md' >
             <div className='font-bold text-xl'>
@@ -236,24 +208,24 @@ useEffect(() => {
         </div>
 
         {
-            currentChatMessagesLoading&&AES?
+            currentChatMessagesLoading||!privateKey?
             <Loading/>
             :
             <div className='flex-1 overflow-y-scroll px-4  '>
 
               {
-                displayMessages?.filter(x=>x.chatroomId==ActiveChatRoom).map((message:MessageBubbleType)=>(
+                displayMessages?.filter(x=>x.chatroomId==ActiveChatRoom).map((message:MessageBubbleTypeMain)=>(
                    <div key={message.id||++tempMessageId+"_tempId"} className='w-[95%] mx-auto '>
-                     <MessageBubble createdAt={message.createdAt} id={message.id} userId={message.userId} message={message.message}/>
+                     <MessageBubble createdAt={message.createdAt} id={message.id} userId={message.userId} message={ (message.message)} privateKey={privateKey} messageFromSender={message.messageFromSender}   />
                    </div>
                 ))
               }
   
               {
                 
-                AllMessages?.filter(x=>x.chatroomId==ActiveChatRoom).map((message:MessageBubbleType)=>(
+                AllMessages?.filter(x=>x.chatroomId==ActiveChatRoom).map( (message:MessageBubbleTypeMain)=>(
                    <div key={message.id||++tempMessageId+"_tempId"} className='w-[95%] mx-auto '>
-                     <MessageBubble createdAt={message.createdAt} id={message.id} userId={message.userId} message={message.message}/>
+                     <MessageBubble createdAt={message.createdAt} id={message.id} userId={message.userId} message={(message.message)}  privateKey={privateKey} messageFromSender={message.messageFromSender}  />
                    </div>
                 ))
               }

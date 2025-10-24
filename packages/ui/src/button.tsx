@@ -11,7 +11,7 @@ export const Button = ({ text, buttonType, buttonClick }: ButtonProps) => {
   if(buttonType==='primary'){
     return (
     <button
-      className={`bg-teal-500 text-white p-2 border border-white rounded-lg`}
+      className={`bg-teal-500 w-36 text-black p-2 border border-white rounded-lg`}
       onClick={() => buttonClick && buttonClick()}
     >
       {text}
@@ -20,7 +20,7 @@ export const Button = ({ text, buttonType, buttonClick }: ButtonProps) => {
   }
   return (
     <button
-      className={` bg-gray-400 text-white p-2 border-1 border-white rounded-lg`}
+      className={` bg-gray-400 w-36 text-black  p-2 border-1 border-white rounded-lg`}
       onClick={() => buttonClick && buttonClick()}
     >
       {text}

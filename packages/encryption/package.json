@@ -9,8 +9,11 @@
   "directories": {
     "lib": "lib"
   },
-  "exports":"./dist/e2ee.js",
+  "exports":{
+    "./*":"./dist/e2ee.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev":  "npx tsc -b"
   }
 }

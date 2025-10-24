@@ -10,7 +10,8 @@ export type user={
     id:number,
     username:string,
     firstname:string,
-    lastname:string
+    lastname:string,
+    publicKey:string
     
 }
 
@@ -40,7 +41,6 @@ const ChatroomBox = ({chatRoom,newMessageChatId}:ChatRoomBoxType) => {
 
     
     const user=users[0]?.user
-    // console.log(user)
 
   return (
     <div className={`flex border-b bg-teal-200/20 ${id==ActiveChatRoom&& ' bg-teal-400/60 '} rounded-lg 
@@ -74,7 +74,7 @@ const ChatroomBox = ({chatRoom,newMessageChatId}:ChatRoomBoxType) => {
 
         {
             newMessageChatId==id&&
-            <div className='w-6 h-6 bg-green-200 rounded-full'>
+            <div className='w-6 h-6 bg-green-400 rounded-full'>
                 N
             </div>
         }

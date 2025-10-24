@@ -7,6 +7,8 @@ import { HttpServerAddress } from "../../../../utils/secrets";
 
 
   const authOptions:NextAuthOptions={
+
+    
     providers:[
       CredentialsProvider({
         name:"Username",

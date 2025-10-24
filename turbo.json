@@ -1,6 +1,15 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalDependencies": [
+    ".env"
+  ],
+  "globalEnv": [
+    "HTTP_SERVER_ADDRESS",
+    "HTTP_SERVER_PORT",
+    "NEXTAUTH_SECRET",
+    "WS_PORT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -17,8 +26,12 @@
       "cache": false,
       "persistent": true,
       "env": [
-        "HTTP_SERVER_PORT"
-      ]
+        "HTTP_SERVER_PORT",
+        "HTTP_SERVER_ADDRESS",
+        "NEXTAUTH_SECRET",
+        "WS_PORT"
+      ],
+      "outputs": []  
     }
   }
 }

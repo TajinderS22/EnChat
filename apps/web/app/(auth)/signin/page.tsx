@@ -31,7 +31,6 @@ const Signin = () => {
       username: data.username,
       password: data.password,
     });
-    console.log(result)
     if(result?.ok){
       router.push("/app/chat")
     }
@@ -49,7 +48,7 @@ const Signin = () => {
   return (
     <div className=" flex flex-col items-center">
       {errorMessage && (
-        <div className="fixed top-5 bg-red-200 text-black px-4 py-2 
+        <div className="fixed top-5 bg-gray-300 text-black px-4 py-2 
         rounded shadow-md z-50
         
         ">
@@ -57,8 +56,8 @@ const Signin = () => {
         </div>
       )}
 
-      <div className="flex  max-w-[1920px] mx-auto items-center justify-center min-h-screen">
-        <div className="bg-teal-300/10 w-[330px] h-fit p-4 pt-0 rounded-lg">
+      <div className="flex   max-w-[1920px] mx-auto items-center justify-center min-h-screen">
+        <div className="bg-teal-300/10 border dark:border-teal-100/40  w-[330px] h-fit p-4 pt-0 rounded-lg">
           <div className="text-2xl dark:text-teal-300 text-teal-600 font-bold my-4">
             Sign in to Your chats
           </div>
