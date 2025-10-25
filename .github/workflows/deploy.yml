@@ -21,9 +21,6 @@ jobs:
         -   name: Install Dependencies
             run: pwd && npm install
 
-        -   name: Build The app
-            run: npm run build
-
         -   name: Upload build to server
             env:
               HOST: ${{ secrets.PROD_HOST }}
