@@ -40,7 +40,7 @@ jobs:
             set -e
 
             echo '--- Switching to project directory ---'
-            cd /home/ubuntu/Enchat
+            cd /home/ubuntu/EnChat
 
             echo '--- Resetting local changes ---'
             git reset --hard
