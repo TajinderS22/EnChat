@@ -53,7 +53,7 @@ jobs:
             git pull origin main
 
             echo '--- Installing dependencies ---'
-            npm install 
+            pwd && npm install 
 
             echo '--- Generating Prisma client ---'
             cd packages/db && npx prisma generate && npx tsc - && cd ../../
