@@ -40,8 +40,9 @@ jobs:
             set -e
 
             # load environment
-            source ~/.profile
-            source ~/.bashrc
+            export NVM_DIR=\"$HOME/.nvm\"
+            [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\"
+            nvm use 22
 
             echo '--- Switching to project directory ---'
             cd /home/ubuntu/EnChat
