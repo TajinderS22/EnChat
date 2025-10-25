@@ -14,10 +14,10 @@ const Navbar = () => {
         </div>
 
         <div className="list-none flex gap-6 items-center pr-6">
-          <li>Home</li>
-          <li>AboutUs</li>
-          <li>ContactUs</li>
-          <li>GetStarted</li>
+          <a href="/" ><li>Home</li></a>
+          <a href="/privacy" ><li>AboutUs</li></a>
+          <a href="/contact" ><li>ContactUs</li></a>
+          <a href="/signup" ><li>GetStarted</li></a>
         </div>
 
     </div>
