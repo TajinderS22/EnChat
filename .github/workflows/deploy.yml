@@ -21,6 +21,10 @@ jobs:
         run: |
           echo "$KEY" > key.pem
           chmod 600 key.pem
+
+          mkdir -p ~/.ssh   # ✅ create SSH folder
+          chmod 700 ~/.ssh
+
           cat >> ~/.ssh/config <<END
           Host prod
             HostName $HOST
@@ -28,6 +32,7 @@ jobs:
             IdentityFile ./key.pem
             StrictHostKeyChecking no
           END
+
 
       - name: Pull and Deploy on VM
         run: |
