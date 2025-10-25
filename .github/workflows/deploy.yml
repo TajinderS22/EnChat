@@ -1,56 +1,59 @@
 name: Deploy on Production
 
 on:
-    push:
-        branches:
-            - main
-
+  push:
+    branches:
+      - main
 
 jobs:
-   deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-        -   name: Checkout repo
-            uses: actions/checkout@v3
+      - name: Checkout (for CI context only)
+        uses: actions/checkout@v4
 
-        -   name: Setup Nodejs
-            uses: actions/setup-node@v3
-            with:
-                node-version: 22
-        -   name: Install Dependencies
-            run: pwd && npm install
+      - name: Setup SSH
+        env:
+          HOST: ${{ secrets.PROD_HOST }}
+          USER: ${{ secrets.PROD_USER }}
+          KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          echo "$KEY" > key.pem
+          chmod 600 key.pem
+          cat >> ~/.ssh/config <<END
+          Host prod
+            HostName $HOST
+            User $USER
+            IdentityFile ./key.pem
+            StrictHostKeyChecking no
+          END
 
-        -   name: Upload build to server
-            env:
-              HOST: ${{ secrets.PROD_HOST }}
-              USER: ${{ secrets.PROD_USER }}
-              KEY: ${{ secrets.PROD_SSH_KEY }}
-              TARGET_DIR: /home/ubuntu/Enchat
-            run: |
-                echo "$KEY" > key.pem
-                chmod 600 key.pem
-                echo $USER@$HOST
+      - name: Pull and Deploy on VM
+        run: |
+          ssh prod "
+            set -e
 
-               
-                rsync -avz --delete -e "ssh -i key.pem -o StrictHostKeyChecking=no" \
-                  ./ $USER@$HOST:$TARGET_DIR/
-                
-                ssh -i key.pem -o StrictHostKeyChecking=no $USER@$HOST "
-                  cd $TARGET_DIR
-                
-                  echo '--- (Server) Installing dependencies ---'
-                  npm install
-                
-                  echo '--- (Server) Running Prisma Generate (if needed) ---'
-                  
-                  npx prisma generate
-                
-                  echo '--- (Server) Building app ---'
-                  npm run build
-                
-                  echo '--- (Server) Restarting app CD Test complete ---'
-                 
-                "
-        
-        
+            echo '--- Switching to project directory ---'
+            cd /home/ubuntu/Enchat
+
+            echo '--- Resetting local changes ---'
+            git reset --hard
+
+            echo '--- Pulling latest code ---'
+            git pull origin main
+
+            echo '--- Installing dependencies ---'
+            npm install --production=false
+
+            echo '--- Generating Prisma client ---'
+            npx prisma generate || echo 'No Prisma found, skipping...'
+
+            echo '--- Building the app ---'
+            npm run build
+
+            echo '--- Restarting app ---'
+            pm2 restart all || echo 'Start your app manually if not using PM2'
+
+            echo '✅ Deployment complete!'
+          "
