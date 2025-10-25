@@ -39,6 +39,10 @@ jobs:
           ssh prod "
             set -e
 
+            # load environment
+            source ~/.profile
+            source ~/.bashrc
+
             echo '--- Switching to project directory ---'
             cd /home/ubuntu/EnChat
 
