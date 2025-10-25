@@ -55,8 +55,8 @@ jobs:
             cd packages/db && npx prisma generate && npx tsc - && cd ../../
 
             echo '--- Building the app ---'
-            npm run build
-
+            npx turbo build --force
+            
             echo '--- Restarting app ---'
             pm2 restart all 
             echo '✅ Deployment complete!'

@@ -17,6 +17,7 @@ import { HttpServerAddress } from "../../../../utils/secrets";
               password: { label: "Password", type: "password" }
         },
         async authorize(credentials,req){
+          console.log(HttpServerAddress+"/signin")
           try {
             console.log(HttpServerAddress)
             const response = await axios.post(HttpServerAddress+"/signin", {
