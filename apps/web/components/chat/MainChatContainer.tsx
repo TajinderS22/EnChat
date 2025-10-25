@@ -49,7 +49,7 @@ const MainChatContainer = () => {
     const publicKey=ActiveChatUser?.publicKey;
     const [displayMessages,setDisplayMessages]=useState<any[]>([])
 
-    const [privateKey,setPrivateKey]=useState(null)
+    const [privateKey,setPrivateKey]=useState<null|string>(null)
 
     const User=useSelector((state:RootState)=>state.user)
 
@@ -58,11 +58,23 @@ const MainChatContainer = () => {
         if(!publicKey){
           return
         }
-        if(sendMessageRef?.current?.value==""|| sendMessageRef?.current?.value==' '){
-          return null;
+        const text = sendMessageRef?.current?.value;
+        if(!text || text.trim() === ''){
+          dispatch(setErrorMessage("Please enter some message"))
+          setTimeout(()=>{
+              dispatch(clearErrorMessage())
+          },3000)
+          return;
         }
-        const encryptedMessage= await encryptMessage(sendMessageRef?.current?.value,publicKey)
-        const encryptedMessageFromSender = await encryptMessage(sendMessageRef?.current?.value,User.publicKey)
+        if(!User.publicKey){
+          dispatch(setErrorMessage("Some Error Occured"))
+          setTimeout(()=>{
+              dispatch(clearErrorMessage())
+          },3000)
+          return 
+        }
+        const encryptedMessage= await encryptMessage(text, publicKey)
+        const encryptedMessageFromSender = await encryptMessage(text, User.publicKey)
         const MessageData={
             type:'send_message',
             fromUserId:User.id,
@@ -71,11 +83,12 @@ const MainChatContainer = () => {
             messageFromSender:encryptedMessageFromSender,
             chatroomIdFe:ActiveChatRoom    
         }
-        if(MessageData.message==' '||''){
+        if(MessageData.message == null || MessageData.message === '' || MessageData.message === ' '){
             dispatch(setErrorMessage("Please enter some message"))
             setTimeout(()=>{
                 dispatch(clearErrorMessage())
             },3000)
+            return;
         }
         sendMessage(JSON.stringify(MessageData))
         if (sendMessageRef?.current) {

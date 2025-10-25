@@ -19,7 +19,7 @@
     "typescript": "^5.0.0"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/prisma.js"
   },
   "files": [
     "dist",

@@ -1,14 +1,17 @@
 {
-  "extends": "@repo/typescript-config/backend.json",
   "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
     "composite": true
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../packages/db" },
-    { "path": "../../packages/encryption" },
-    { "path": "../../packages/ui" }
-  ]
+  "include": ["src", "index.ts"],
+  
 }

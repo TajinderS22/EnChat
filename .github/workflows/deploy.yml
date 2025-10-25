@@ -29,13 +29,30 @@ jobs:
               HOST: ${{ secrets.PROD_HOST }}
               USER: ${{ secrets.PROD_USER }}
               KEY: ${{ secrets.PROD_SSH_KEY }}
+              TARGET_DIR: /home/azureuser/Enchat
             run: |
-              echo "$KEY" > key.pem
-              chmod 600 key.pem
-            
-              rsync -avz --delete -e "ssh -i key.pem -o StrictHostKeyChecking=no" ./EnChat/apps/web/.next $USER@$HOST:/tmp/Enchat-temp/apps/web/.next
-            
-              ssh -i key.pem -o StrictHostKeyChecking=no $USER@$HOST "sudo rsync -avz --delete /tmp/Enchat-temp/apps/web/.next /home/azureuser/Enchat/apps/web/.next && sudo rm -rf /tmp/EcChat-temp/apps/web/.next"
-            
+                echo "$KEY" > key.pem
+                chmod 600 key.pem
+
+               
+                rsync -avz --delete -e "ssh -i key.pem -o StrictHostKeyChecking=no" \
+                  ./ $USER@$HOST:$TARGET_DIR/
+                
+                ssh -i key.pem -o StrictHostKeyChecking=no $USER@$HOST "
+                  cd $TARGET_DIR
+                
+                  echo '--- (Server) Installing dependencies ---'
+                  npm install
+                
+                  echo '--- (Server) Running Prisma Generate (if needed) ---'
+                  
+                  npx prisma generate
+                
+                  echo '--- (Server) Building app ---'
+                  npm run build
+                
+                  echo '--- (Server) Restarting app CD Test complete ---'
+                 
+                "
         
         

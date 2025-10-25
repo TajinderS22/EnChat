@@ -46,7 +46,7 @@ const page = () => {
 
   return (
     <div className='w-[98%] mx-auto flex max-w-[1536px] rounded-xl h-[98svh] my-4 bg-[#FAFAFA] dark:bg-[#0A0A0A] '>
-      {ErrorMessage&&
+      {ErrorMessage &&
       
       <div className=' fixed w-full px-16 flex justify-between'>
         <Alert message={ErrorMessage}/>

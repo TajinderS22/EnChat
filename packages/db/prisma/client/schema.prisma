@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  firstname String
+  lastname  String?
+  password  String
+  email     String
+  createdAt DateTime @default(now())
+
+  publicKey String?
+
+  privateKey PrivateKey?
+
+  Chatrooms ChatroomUsers[]
+  Messages  Messages[]
+}
+
+model Chatrooms {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  users    ChatroomUsers[]
+  messages Messages[]
+}
+
+model Messages {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  chatroomId        Int
+  message           String
+  messageFromSender String
+  createdAt         DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  chatroom Chatrooms @relation(fields: [chatroomId], references: [id])
+}
+
+model ChatroomUsers {
+  chatroomId Int
+  userId     Int
+  joinedAt   DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  chatroom Chatrooms @relation(fields: [chatroomId], references: [id])
+
+  @@id([userId, chatroomId])
+}
+
+model PrivateKey {
+  privateKeyId  Int    @id @default(autoincrement())
+  encrypted_key String
+  salt          String
+  iv            String
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+}

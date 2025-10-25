@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '../../redux/store'
 import { decryptMessage } from '@repo/encryption/dist'
+import { setErrorMessage } from '../../redux/slices/ErrorMessageSlice'
 
 export type MessageBubbleType={
     messageFromSender?: string
@@ -20,6 +21,8 @@ const MessageBubble = (props:MessageBubbleType) => {
 
     const [decryptedMessage, setDecryptedMessage] = useState('...'); 
 
+    const dispatch=useDispatch()
+
 
 
     useEffect(() => {
@@ -27,6 +30,10 @@ const MessageBubble = (props:MessageBubbleType) => {
         try {
           let decryptedText
           if(userId==Number(User.id)){
+            if(!messageFromSender){
+              dispatch(setErrorMessage("Decryption failed"))
+              return 
+            }
             decryptedText=await decryptMessage(messageFromSender,privateKey)
           }else{
             decryptedText = await decryptMessage(message, privateKey);
