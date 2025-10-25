@@ -44,6 +44,9 @@ const zodUserSchema=z.object({
 
 const port = process.env.HTTP_SERVER_PORT || 3030
 
+app.get('/test',(req,res)=>{
+    res.send("Backend Now working fine")
+})
 
 app.post('/signup',async(req,res)=>{
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

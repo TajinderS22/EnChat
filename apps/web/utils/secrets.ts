@@ -1,0 +1,1 @@
+export const  HttpServerAddress='http://api.enchat.tajinder.xyz'

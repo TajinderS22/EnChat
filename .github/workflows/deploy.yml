@@ -58,7 +58,6 @@ jobs:
             npm run build
 
             echo '--- Restarting app ---'
-            pm2 restart all || echo 'Start your app manually if not using PM2'
-
+            pm2 restart all 
             echo '✅ Deployment complete!'
           "
