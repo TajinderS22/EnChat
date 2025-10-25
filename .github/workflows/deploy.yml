@@ -53,10 +53,10 @@ jobs:
             git pull origin main
 
             echo '--- Installing dependencies ---'
-            npm install --production=false
+            npm install 
 
             echo '--- Generating Prisma client ---'
-            npx prisma generate || echo 'No Prisma found, skipping...'
+            cd packages/db && npx prisma generate && npx tsc - && cd ../../
 
             echo '--- Building the app ---'
             npm run build
