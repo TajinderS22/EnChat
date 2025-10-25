@@ -39,11 +39,6 @@ jobs:
           ssh prod "
             set -e
 
-            # load environment
-            export NVM_DIR=\"$HOME/.nvm\"
-            [ -s \"$NVM_DIR/nvm.sh\" ] && \. \"$NVM_DIR/nvm.sh\"
-            nvm use 22
-
             echo '--- Switching to project directory ---'
             cd /home/ubuntu/EnChat
 
