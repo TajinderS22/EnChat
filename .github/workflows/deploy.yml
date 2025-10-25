@@ -56,8 +56,8 @@ jobs:
 
             echo '--- Building the app ---'
             npx turbo build --force
-            
+
             echo '--- Restarting app ---'
-            pm2 restart all 
+            /home/ubuntu/.nvm/versions/node/v22.20.0/bin/pm2 restart all 
             echo '✅ Deployment complete!'
           "
