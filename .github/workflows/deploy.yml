@@ -52,7 +52,7 @@ jobs:
             pwd && npm install 
 
             echo '--- Generating Prisma client ---'
-            cd packages/db && npx prisma generate && npx tsc - && cd ../../
+            cd packages/db && npx prisma generate && npx tsc  && cd ../../
 
             echo '--- Building the app ---'
             npx turbo build --force
