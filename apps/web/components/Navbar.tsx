@@ -13,7 +13,7 @@ const Navbar = () => {
             Enchat
         </div>
 
-        <div className="list-none flex gap-6 items-center pr-6">
+        <div className="list-none md:flex hidden gap-6 items-center pr-6">
           <a href="/" ><li>Home</li></a>
           <a href="/privacy" ><li>AboutUs</li></a>
           <a href="/contact" ><li>ContactUs</li></a>

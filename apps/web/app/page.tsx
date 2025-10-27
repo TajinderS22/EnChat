@@ -29,7 +29,7 @@ export default function Home() {
       </div>
 
       <main className="flex-grow flex items-center justify-center z-0 px-4">
-        <div className="max-w-3xl mx-auto text-center py-24">
+        <div className="max-w-3xl mx-auto hidden md:block text-center py-24">
           
 
           <h1 className="text-4xl md:text-6xl font-bold text-teal-700 dark:text-teal-300">
@@ -61,7 +61,15 @@ export default function Home() {
               />
             </Link>
           </div>
+          
         </div>
+        <div>
+            <div className="text-white md:hidden mr-2 my-4 text-2xl font-bold block ">Please open in Desktop  </div>
+            <div>
+              EnChat is currently not optimized for small screens.
+            </div>
+        </div>
+
       </main>
 
       {/* Footer */}
