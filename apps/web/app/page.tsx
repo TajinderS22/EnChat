@@ -63,8 +63,8 @@ export default function Home() {
           </div>
           
         </div>
-        <div>
-            <div className="text-white md:hidden mr-2 my-4 text-2xl font-bold block ">Please open in Desktop  </div>
+        <div className=" md:hidden ">
+            <div className="text-white  mr-2 my-4 text-2xl font-bold  ">Please open in Desktop  </div>
             <div>
               EnChat is currently not optimized for small screens.
             </div>
