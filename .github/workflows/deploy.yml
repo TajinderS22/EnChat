@@ -48,7 +48,7 @@ jobs:
             npm install -g pm2
 
 
-            
+
             echo '--- Node version ---'
             node -v
             npm -v
@@ -73,7 +73,7 @@ jobs:
             cd ../../
 
             echo '--- Building the app ---'
-            npx turbo build --force
+            
 
             echo '--- Restarting app ---'
             pm2 restart all
