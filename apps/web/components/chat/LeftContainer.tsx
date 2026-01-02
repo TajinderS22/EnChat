@@ -24,7 +24,7 @@ const LeftContainer = () => {
 
   const User = useSelector((state: RootState) => state.user);
 
-  const [newChatUsers, setNewChatUsers] = useState<any[]|null>(null);
+  const [newChatUsers, setNewChatUsers] = useState<any[] | null>(null);
 
   const [ChatRooms, setChatRooms] = useState<any>(null);
 
@@ -39,7 +39,6 @@ const LeftContainer = () => {
     (state: RootState) => state.ActiveChatRoom
   );
   const NewMessage = useSelector((state: RootState) => state.NewMessage);
-
   const getAllChatRooms = async () => {
     if (!User.id) return null;
     const chatRooms = await axios.post(HttpServerAddress + "/user/chatrooms", {
@@ -58,16 +57,14 @@ const LeftContainer = () => {
     const user = await axios.post(HttpServerAddress + "/user/find_user", {
       username: NewChatRef?.current?.value,
     });
-    if(user.data.user.length==0){
-      setNewChatUsers(null)
-      return 
+    if (user.data.user.length == 0) {
+      setNewChatUsers(null);
+      return;
     }
     setNewChatUsers(user.data.user);
   };
 
-  const handleNewChatClick = async (user:any) => {
-
-
+  const handleNewChatClick = async (user: any) => {
     // create chatroom here
     const TempUser = user;
 
@@ -103,7 +100,7 @@ const LeftContainer = () => {
       flex flex-col
       p-2"
     >
-      <Toaster/>
+      <Toaster />
       <div className=" justify-between  p-3 rounded-lg  px-2">
         <div className="flex flex-col w-full">
           <div className="w-11/12 mx-auto ">
@@ -117,36 +114,35 @@ const LeftContainer = () => {
              bg-[#141414] dark:bg-[#cccccc] text-[#fafafa] dark:text-[#141414]
 "
                 onChange={() => {
-                  console.log(NewChatRef?.current?.value!=='')
-                  if (NewChatRef?.current?.value !=='') {
+                  console.log(NewChatRef?.current?.value !== "");
+                  if (NewChatRef?.current?.value !== "") {
                     getNewChatUsers();
                   } else {
                     setNewChatUsers(null);
                   }
-                  return setNewChatUsers(null)
+                  return setNewChatUsers(null);
                 }}
               />
-              
+
               <div
                 className=" p-2 w-10 rounded-lg dark:bg-[#cccccc] "
-                onClick={()=>{
-                  if(!newChatUsers){
-                      toast.error("No user found", {
-                        duration: 2000,
-                        position:"top-left",
-                        style: {
-                          border: "1px solid #713200",
-                          padding: "6px",
-                          color: "#ffffff",
-                          background: "#151515",
-                        },
-                      });
-                    }
+                onClick={() => {
+                  if (!newChatUsers) {
+                    toast.error("No user found", {
+                      duration: 2000,
+                      position: "top-left",
+                      style: {
+                        border: "1px solid #713200",
+                        padding: "6px",
+                        color: "#ffffff",
+                        background: "#151515",
+                      },
+                    });
+                  }
                 }}
               >
                 <SearchIcon />
               </div>
-            
             </div>
 
             {newChatUsers && (
