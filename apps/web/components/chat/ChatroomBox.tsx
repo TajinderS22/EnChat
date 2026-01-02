@@ -74,8 +74,7 @@ const ChatroomBox = ({chatRoom,newMessageChatId}:ChatRoomBoxType) => {
 
         {
             newMessageChatId==id&&
-            <div className='w-6 h-6 bg-green-400 rounded-full'>
-                N
+            <div className='w-3 bg-green-400 animate-ping rounded-full'>
             </div>
         }
 

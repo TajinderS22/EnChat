@@ -121,11 +121,15 @@ app.post("/user/find_user",async(req,res )=>{
     const {username}=req.body
 
    try {
-    const user = await prisma.user.findFirst({
-        where:{
-            username:username
-        }
-    })
+    const user = await prisma.user.findMany({
+      where: {
+        username: {
+          contains: username,
+          mode: "insensitive",
+        },
+      },
+      take: 10
+    });
     
     if(!user){
         res.status(200).json({

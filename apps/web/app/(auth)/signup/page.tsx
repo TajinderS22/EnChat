@@ -40,7 +40,6 @@ const Signup = () => {
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     try{
       const {publicKey,privateKey}=await generateRSAKeys()
-      console.log(privateKey)
       const pk={
         publicKey: publicKey
       }
