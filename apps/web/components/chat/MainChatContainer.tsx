@@ -148,7 +148,7 @@ useEffect(() => {
   const setup = async () => {
     
 
-    wsRef.current = new WebSocket("wss://ws.api.enchat.tajinder.xyz")
+    wsRef.current = new WebSocket("wss://ws.api.enchat.tajinder.in")
 
     wsRef.current.onopen = () => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {

@@ -21,7 +21,7 @@ export default function Contact() {
             Email
           </h2>
           <p className="text-gray-700 dark:text-gray-300 mb-4">
-            For general inquiries, support, or feedback, email us at <a href="mailto:enchat@tajinder.xyz" className="text-teal-500 hover:underline">enchat@tajinder.xyz</a>.
+            For general inquiries, support, or feedback, email us at <a href="mailto:enchat@tajinder.in" className="text-teal-500 hover:underline">enchat@tajinder.in</a>.
           </p>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
             Response Time
