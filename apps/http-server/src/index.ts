@@ -10,10 +10,14 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 
-console.log(path.resolve(process.cwd()))
 const app=express();
 app.use(express.json())
-app.use(cors())
+
+const corsOptions={
+    origin:["https://enchat.tajinder.in","localhost"]
+}
+
+app.use(cors(corsOptions))
 
 
 
@@ -209,8 +213,6 @@ app.post("/signin",async(req,res)=>{
 app.post('/user/chatroom/chats',async(req ,res)=>{
     const {chatroomId}=req.body;
 
-    console.log(chatroomId)
-
 
     const messages= await prisma.messages.findMany({
         where:{
@@ -279,7 +281,6 @@ app.post('/user/privateCredentials', async(req,res)=>{
 app.get('/user/privateCredentials',async(req,res)=>{
     const id = req.query.id;
 
-    
 
     const userId=Number(id);
 
