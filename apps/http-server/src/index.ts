@@ -21,7 +21,7 @@ app.use(
   cors(corsOptions)
 );
 
-app.options("/*splat", cors());
+app.options("*", cors(corsOptions));
 
 
 const saltRounds=15;
