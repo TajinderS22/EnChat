@@ -3,22 +3,25 @@ import * as z from 'zod'
 import bcrypt from 'bcrypt'
 import { prisma } from '@repo/db';
 import cors from 'cors'
+import dotenv from 'dotenv'
 
-import dotenv from 'dotenv';
-import path from 'path';
+dotenv.config({ path: '../../.env' })
 
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 
 const app=express();
 app.use(express.json())
+const corsOptions = {
+  origin: ["https://enchat.tajinder.in", "http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+app.use(
+  cors(corsOptions)
+);
 
-const corsOptions={
-    origin:["https://enchat.tajinder.in","localhost"]
-}
-
-app.use(cors(corsOptions))
-
+app.options("/*splat", cors());
 
 
 const saltRounds=15;
@@ -158,6 +161,7 @@ app.post("/user/find_user",async(req,res )=>{
 })
 
 app.post("/create/chatroom",async(req,res)=>{
+    console.log(req.body)
     const {fromUserId,toUserId}= req.body
     const newChatRoom= await prisma.chatrooms.create({
         data:{
@@ -324,5 +328,5 @@ app.listen(port,()=>{
 })
 
 
-console.error(process.env.HTTP_SERVER_PORT)
+console.log(process.env.HTTP_SERVER_PORT)
 
