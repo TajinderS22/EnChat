@@ -1,0 +1,36 @@
+{
+  "name": "@repo/db",
+  "version": "1.0.0",
+  "main": "dist/src/prisma.js",
+  "types": "dist/src/prisma.d.ts",
+  "scripts": {
+    "build": "tsc  ",
+    "dev": "tsc  ",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "@types/pg": "^8.18.0",
+    "prisma": "^7.4.2",
+    "typescript": "^5.0.0"
+  },
+  "exports": {
+    ".": "./dist/src/prisma.js"
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.4.2",
+    "@prisma/client": "^7.4.2",
+    "dotenv": "^17.3.1",
+    "pg": "^8.20.0"
+  }
+}

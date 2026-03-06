@@ -1,0 +1,53 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "globalDependencies": [
+    ".env"
+  ],
+  "globalEnv": [
+    "HTTP_SERVER_ADDRESS",
+    "HTTP_SERVER_PORT",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL",
+    "WS_PORT",
+    "DATABASE_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "check-types": {
+      "dependsOn": [
+        "^check-types"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "HTTP_SERVER_PORT",
+        "HTTP_SERVER_ADDRESS",
+        "NEXTAUTH_SECRET",
+        "NEXTAUTH_URL",
+        "WS_PORT",
+        "DATABASE_URL"
+      ],
+      "outputs": []
+    }
+  }
+}

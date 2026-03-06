@@ -1,0 +1,61 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         Int             @id @default(autoincrement())
+  username   String          @unique
+  firstname  String
+  lastname   String?
+  password   String
+  email      String
+  createdAt  DateTime        @default(now())
+  publicKey  String?
+  Chatrooms  ChatroomUsers[]
+  Messages   Messages[]
+  privateKey PrivateKey?
+}
+
+model Chatrooms {
+  id            Int             @id @default(autoincrement())
+  createdAt     DateTime        @default(now())
+  lastMessageAt DateTime        @default(now())
+  users         ChatroomUsers[]
+  messages      Messages[]
+}
+
+model Messages {
+  id                Int       @id @default(autoincrement())
+  userId            Int
+  chatroomId        Int
+  message           String
+  createdAt         DateTime  @default(now())
+  messageFromSender String
+  chatroom          Chatrooms @relation(fields: [chatroomId], references: [id])
+  user              User      @relation(fields: [userId], references: [id])
+}
+
+model ChatroomUsers {
+  chatroomId Int
+  userId     Int
+  joinedAt   DateTime  @default(now())
+  chatroom   Chatrooms @relation(fields: [chatroomId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+
+  @@id([userId, chatroomId])
+}
+
+model PrivateKey {
+  privateKeyId  Int    @id @default(autoincrement())
+  encrypted_key String
+  salt          String
+  iv            String
+  userId        Int    @unique
+  user          User   @relation(fields: [userId], references: [id])
+}
