@@ -1,1 +1,0 @@
-export const ENCRYPTION_PASSWORD='this is my own thing'
