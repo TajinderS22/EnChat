@@ -1,18 +1,17 @@
+import './loadEnv.js'
+
 import express from 'express'
 import * as z from 'zod'
 import bcrypt from 'bcrypt'
-import { prisma } from '@repo/db';
+import { getPrisma, prisma } from '@repo/db';
 import cors from 'cors'
-import dotenv from 'dotenv'
-
-dotenv.config({ path: '../../.env' })
 
 
 
 const app=express();
 app.use(express.json())
 const corsOptions = {
-  origin: ["https://enchat.tajinder.in", "http://localhost:3000"],
+  origin: ["https://enchat.tajinder.in", "http://localhost:3000", "https://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -21,10 +20,12 @@ app.use(
   cors(corsOptions)
 );
 
-app.options("*", cors(corsOptions));
+
 
 
 const saltRounds=15;
+
+const db =getPrisma();
 
 
 export type UserType={
@@ -83,7 +84,7 @@ app.post('/signup',async(req,res)=>{
 
         userInput.password= hashedPassword
 
-        const existingUser=await prisma.user.findFirst({
+        const existingUser=await db.user.findFirst({
             where:{
                 OR:[{
                     email:email
@@ -100,7 +101,7 @@ app.post('/signup',async(req,res)=>{
 
         const data=zodUserSchema.parse(userInput)
 
-        const response = await prisma.user.create({
+        const response = await db.user.create({
             data
         })
         if(response){
@@ -128,7 +129,7 @@ app.post("/user/find_user",async(req,res )=>{
     const {username}=req.body
 
    try {
-    const user = await prisma.user.findMany({
+    const user = await db.user.findMany({
       where: {
         username: {
           contains: username,
@@ -163,7 +164,7 @@ app.post("/user/find_user",async(req,res )=>{
 app.post("/create/chatroom",async(req,res)=>{
     console.log(req.body)
     const {fromUserId,toUserId}= req.body
-    const newChatRoom= await prisma.chatrooms.create({
+    const newChatRoom= await db.chatrooms.create({
         data:{
             users:{
                 create:[
@@ -182,8 +183,11 @@ app.post("/create/chatroom",async(req,res)=>{
 app.post("/signin",async(req,res)=>{
     const {username,password}=req.body
 
+    console.log("Herer at signing", username);
+    
+
     try {
-        const existingUser= await prisma.user.findFirst({
+        const existingUser= await db.user.findFirst({
             where:{
                 username
             }
@@ -218,14 +222,22 @@ app.post('/user/chatroom/chats',async(req ,res)=>{
     const {chatroomId}=req.body;
 
 
-    const messages= await prisma.messages.findMany({
+    const messages= await db.messages.findMany({
         where:{
             chatroom:{
                 id:chatroomId
             }
         },
-        take:100
+        orderBy: {
+            createdAt: 'desc'
+        },
+        take: 100
+
     });
+
+    messages.reverse()
+
+    
 
     res.status(200).json({
         messages:messages
@@ -235,7 +247,7 @@ app.post('/user/chatroom/chats',async(req ,res)=>{
 
 app.post('/user/chatrooms',async(req,res)=>{
     const {userId}=req.body
-    const chatRooms= await prisma.chatrooms.findMany({
+    const chatRooms= await db.chatrooms.findMany({
       where:{
         users:{
             some:{
@@ -245,6 +257,7 @@ app.post('/user/chatrooms',async(req,res)=>{
       },
       select:{
         id:true,
+        lastMessageAt:true,
         users:{
             where:{
                 NOT:{
@@ -272,9 +285,9 @@ app.post('/user/chatrooms',async(req,res)=>{
     
 })
 
-app.post('/user/privateCredentials', async(req,res)=>{
+app.post('/user/privateCredentials/', async(req,res)=>{
     const data=req.body;
-    const result= await  prisma.privateKey.create({data});
+    const result= await  db.privateKey.create({data});
 
     res.status(200).json({
         message:`${result.userId} has registered Pk`
@@ -285,6 +298,7 @@ app.post('/user/privateCredentials', async(req,res)=>{
 app.get('/user/privateCredentials',async(req,res)=>{
     const id = req.query.id;
 
+    console.log("Im Here",id)
 
     const userId=Number(id);
 
@@ -298,7 +312,7 @@ app.get('/user/privateCredentials',async(req,res)=>{
 
     try {
         if(userId){
-            const result= await prisma.privateKey.findFirst({
+            const result= await db.privateKey.findFirst({
             where:{
                 userId,
             },

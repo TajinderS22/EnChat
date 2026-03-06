@@ -1,15 +1,18 @@
 {
-  "extends":"../typescript-config/base.json",
+  "extends": "../typescript-config/base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".",
+    // you can also add other overrides here
+    // "declaration": true,
+    // "moduleResolution": "node",
+    // "esModuleInterop": true
   },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "dist"
+  ]
 }

@@ -45,7 +45,14 @@ const LeftContainer = () => {
       userId: User.id,
     });
 
-    setChatRooms(chatRooms.data.chatRooms);
+    const sortedChatRooms = chatRooms.data.chatRooms.sort(
+      (a: any, b: any) =>
+        new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+    );
+    console.log(chatRooms)
+
+
+    setChatRooms(sortedChatRooms);
   };
   useEffect(() => {
     setInterval(() => {
@@ -92,6 +99,8 @@ const LeftContainer = () => {
   if (!HttpServerAddress) {
     return <div>SomeDev Borke the app</div>;
   }
+
+  console.log(ChatRooms);
 
   return (
     <div
@@ -166,7 +175,7 @@ const LeftContainer = () => {
         </div>
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 overflow-scroll">
         {ChatRooms ? (
           ChatRooms?.map((chatroom: any) => {
             //@ts-ignore

@@ -12,7 +12,7 @@ import BG from '../icons/BG'
 import { decryptMessage, decryptPrivateKeyWithPassword, encryptMessage } from '@repo/encryption/dist'
 import { useRouter } from 'next/navigation'
 import { current } from '@reduxjs/toolkit'
-import { HttpServerAddress } from '../../utils/secrets'
+import { HttpServerAddress, WebsocketServerUrl } from '../../utils/secrets'
 
 
 
@@ -101,6 +101,7 @@ const MainChatContainer = () => {
 
     const getCurrentChatMessages=async()=>{
         const response= await axios.post(HttpServerAddress+"/user/chatroom/chats",{chatroomId:ActiveChatRoom})
+        
         if(response){
             setCurrentChatMessagesLoading(false)
         }
@@ -148,7 +149,7 @@ useEffect(() => {
   const setup = async () => {
     
 
-    wsRef.current = new WebSocket("wss://ws.api.enchat.tajinder.in")
+    wsRef.current = new WebSocket(WebsocketServerUrl)
 
     wsRef.current.onopen = () => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {

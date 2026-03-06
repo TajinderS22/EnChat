@@ -1,8 +1,12 @@
-import WebSocket, { WebSocketServer } from "ws";
 import dotenv from "dotenv";
-import { prisma } from "@repo/db";
+dotenv.config({ path: "../../.env" });
 
-dotenv.config({ path: "../../../.env" });
+import WebSocket, { WebSocketServer } from "ws";
+import { getPrisma } from "@repo/db";
+
+// getPrisma() is called here — AFTER dotenv.config() above has run,
+// so DATABASE_URL is guaranteed to be set
+const db = await getPrisma();
 
 interface extendedWebSocket extends WebSocket {
   userId?: string;
@@ -16,24 +20,51 @@ const onlineUsers = new Map();
 const messagesToBeSaved: any = [];
 
 const sendMessagesImmediate = async () => {
-  await prisma.messages.createMany({
-    data: messagesToBeSaved,
-  });
+  if (messagesToBeSaved.length === 0) return;
+
+  // Copy and clear the queue immediately to avoid race conditions
+  const messagesToProcess = [...messagesToBeSaved];
   messagesToBeSaved.length = 0;
+
+  try {
+    const messages = messagesToProcess.map((x: any) => x.messageData);
+    await db.messages.createMany({
+      data: messages,
+    });
+
+    const allChatroomId = messagesToProcess.map((x: any) => ({
+      chatroomId: x.messageData.chatroomId,
+      time: new Date(x.time).getTime(), // Ensure time is a number for Map comparison
+    }));
+
+    console.log(`Saved ${messagesToProcess.length} messages.`, allChatroomId);
+
+    // Update lastMessageAt for each chatroom
+    const chatroomUpdates = new Map<number, number>();
+    allChatroomId.forEach(({ chatroomId, time }: { chatroomId: number, time: number }) => {
+      if (
+        !chatroomUpdates.has(chatroomId) ||
+        chatroomUpdates.get(chatroomId)! < time
+      ) {
+        chatroomUpdates.set(chatroomId, time);
+      }
+    });
+
+    for (const [chatroomId, time] of chatroomUpdates) {
+      await db.chatrooms.update({
+        where: { id: chatroomId },
+        data: { lastMessageAt: new Date(time) },
+      });
+    }
+  } catch (error) {
+    console.error("Failed to save messages:", error);
+    // Optional: put messages back in queue if save fails
+    // messagesToBeSaved.push(...messagesToProcess);
+  }
 };
 
-if (messagesToBeSaved.length > 10) {
-  sendMessagesImmediate();
-} else {
-  setInterval(async () => {
-    if (messagesToBeSaved.length > 0) {
-      await prisma.messages.createMany({
-        data: messagesToBeSaved,
-      });
-      messagesToBeSaved.length = 0;
-    }
-  }, 5000);
-}
+// Always run the interval to flush messages every 5 seconds
+setInterval(sendMessagesImmediate, 5000);
 
 wss.on("connection", async (ws: extendedWebSocket) => {
   ws.on("message", async (data) => {
@@ -71,7 +102,7 @@ wss.on("connection", async (ws: extendedWebSocket) => {
         let chatroomId = chatroomIdFe;
 
         if (!chatroomId) {
-          const existingChatRoom = await prisma.chatroomUsers.findFirst({
+          const existingChatRoom = await db.chatroomUsers.findFirst({
             where: {
               userId: fromUserId,
               chatroom: {
@@ -89,13 +120,16 @@ wss.on("connection", async (ws: extendedWebSocket) => {
           if (existingChatRoom) {
             chatroomId = existingChatRoom.chatroomId;
             messagesToBeSaved.push({
-              userId: fromUserId,
-              chatroomId,
-              message,
-              messageFromSender,
+              messageData: {
+                userId: fromUserId,
+                chatroomId,
+                message,
+                messageFromSender,
+              },
+              time: Date.now(),
             });
           } else {
-            const newChatRoom = await prisma.chatrooms.create({
+            const newChatRoom = await db.chatrooms.create({
               data: {
                 users: {
                   create: [{ userId: fromUserId }, { userId: toUserId }],
@@ -117,7 +151,7 @@ wss.on("connection", async (ws: extendedWebSocket) => {
                   console.log(`Message sent to user ${userId}`);
                 } else {
                   console.log(
-                    `User ${userId} is not online or WebSocket is not open.`
+                    `User ${userId} is not online or WebSocket is not open.`,
                   );
                 }
               });
@@ -126,20 +160,26 @@ wss.on("connection", async (ws: extendedWebSocket) => {
             sendMessageToUsers([fromUserId, toUserId], messageChatId);
 
             messagesToBeSaved.push({
-              userId: fromUserId,
-              chatroomId,
-              message,
-              messageFromSender,
+              messageData: {
+                userId: fromUserId,
+                chatroomId,
+                message,
+                messageFromSender,
+              },
+              time: Date.now(),
             });
             sendMessagesImmediate();
           }
         }
 
         messagesToBeSaved.push({
-          userId: fromUserId,
-          chatroomId,
-          message,
-          messageFromSender,
+          messageData: {
+            userId: fromUserId,
+            chatroomId,
+            message,
+            messageFromSender,
+          },
+          time: Date.now(),
         });
 
         const recipientSocket = onlineUsers.get(toUserId);
@@ -151,7 +191,7 @@ wss.on("connection", async (ws: extendedWebSocket) => {
             chatroomId,
             message,
             messageFromSender,
-          })
+          }),
         );
 
         //  checking if reciver is online on socket
@@ -163,7 +203,7 @@ wss.on("connection", async (ws: extendedWebSocket) => {
               chatroomId,
               message,
               messageFromSender,
-            })
+            }),
           );
         }
       }

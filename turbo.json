@@ -9,19 +9,32 @@
     "HTTP_SERVER_PORT",
     "NEXTAUTH_SECRET",
     "NEXTAUTH_URL",
-    "WS_PORT"
+    "WS_PORT",
+    "DATABASE_URL"
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": [
+        "^check-types"
+      ]
     },
     "dev": {
       "cache": false,
@@ -31,7 +44,8 @@
         "HTTP_SERVER_ADDRESS",
         "NEXTAUTH_SECRET",
         "NEXTAUTH_URL",
-        "WS_PORT"
+        "WS_PORT",
+        "DATABASE_URL"
       ],
       "outputs": []
     }
