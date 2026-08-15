@@ -1,3 +1,33 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 name: Deploy on Production
 
 on:
@@ -6,296 +36,77 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-
-      # ============================================================
-      # CHECKOUT
-      # ============================================================
-
-      - name: Checkout
+      - name: Checkout (for CI context only)
         uses: actions/checkout@v4
-
-
-      # ============================================================
-      # SETUP NODE
-      # ============================================================
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-
-      # ============================================================
-      # INSTALL DEPENDENCIES
-      # ============================================================
-
-      - name: Install dependencies
-        run: npm ci
-
-
-      # ============================================================
-      # BUILD APPLICATIONS ON GITHUB RUNNER
-      # ============================================================
-
-      - name: Build application
-        run: npm run build:force
-
-
-      # ============================================================
-      # PREPARE BUILD ARTIFACTS
-      #
-      # We DO NOT send:
-      #   .git
-      #   .github
-      #   node_modules
-      #   .env
-      #   Prisma generated client
-      #
-      # The source code already exists on the VM.
-      # ============================================================
-
-      - name: Prepare deployment package
-        run: |
-
-          rm -rf /tmp/enchat-deploy
-          mkdir -p /tmp/enchat-deploy
-
-
-          # --------------------------------------------------------
-          # Next.js
-          # --------------------------------------------------------
-
-          if [ -d "apps/web/.next" ]; then
-            mkdir -p /tmp/enchat-deploy/apps/web
-            cp -r apps/web/.next /tmp/enchat-deploy/apps/web/
-          fi
-
-
-          # --------------------------------------------------------
-          # Web public files
-          # --------------------------------------------------------
-
-          if [ -d "apps/web/public" ]; then
-            mkdir -p /tmp/enchat-deploy/apps/web
-            cp -r apps/web/public /tmp/enchat-deploy/apps/web/
-          fi
-
-
-          # --------------------------------------------------------
-          # HTTP SERVER
-          # --------------------------------------------------------
-
-          if [ -d "apps/http-server/dist" ]; then
-            mkdir -p /tmp/enchat-deploy/apps/http-server
-            cp -r apps/http-server/dist /tmp/enchat-deploy/apps/http-server/
-          fi
-
-
-          # --------------------------------------------------------
-          # WEBSOCKET SERVER
-          # --------------------------------------------------------
-
-          if [ -d "apps/websocket/dist" ]; then
-            mkdir -p /tmp/enchat-deploy/apps/websocket
-            cp -r apps/websocket/dist /tmp/enchat-deploy/apps/websocket/
-          fi
-
-
-          # --------------------------------------------------------
-          # DB BUILD
-          #
-          # Only copy this if your DB package actually produces dist.
-          # Prisma generated client is intentionally NOT copied.
-          # --------------------------------------------------------
-
-          if [ -d "packages/db/dist" ]; then
-            mkdir -p /tmp/enchat-deploy/packages/db
-            cp -r packages/db/dist /tmp/enchat-deploy/packages/db/
-          fi
-
-
-          # --------------------------------------------------------
-          # SHOW DEPLOYMENT CONTENT
-          # --------------------------------------------------------
-
-          echo "======================================"
-          echo "Files being deployed:"
-          echo "======================================"
-
-          find /tmp/enchat-deploy -maxdepth 6 -type f | sort
-
-
-          # --------------------------------------------------------
-          # CREATE ARCHIVE OUTSIDE SOURCE DIRECTORY
-          # --------------------------------------------------------
-
-          tar -czf /tmp/deploy.tar.gz \
-            -C /tmp/enchat-deploy \
-            .
-
-
-      # ============================================================
-      # SETUP SSH
-      # ============================================================
 
       - name: Setup SSH
         env:
           HOST: ${{ secrets.PROD_HOST }}
           USER: ${{ secrets.PROD_USER }}
           KEY: ${{ secrets.PROD_SSH_KEY }}
-
         run: |
-
           echo "$KEY" > key.pem
           chmod 600 key.pem
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          cat >> ~/.ssh/config <<EOF
+          cat >> ~/.ssh/config <<END
           Host prod
             HostName $HOST
             User $USER
-            IdentityFile $(pwd)/key.pem
+            IdentityFile ./key.pem
             StrictHostKeyChecking no
-          EOF
+          END
 
-
-      # ============================================================
-      # UPDATE SOURCE CODE ON VM
-      # ============================================================
-
-      - name: Pull latest code on VM
+      - name: Pull and Deploy on VM
         run: |
-
-          ssh prod <<'EOF'
-
+          ssh prod "
             set -e
 
-            APP_DIR="/home/ubuntu/EnChat"
-
-            cd "$APP_DIR"
-
-            echo "======================================"
-            echo "Pulling latest source code"
-            echo "======================================"
-
-            git reset --hard
-            git pull origin main
-
-            echo "Source code updated."
-
-          EOF
+            # Load nvm
+            export NVM_DIR=\"\$HOME/.nvm\"
+            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
+            nvm install 22 
+            nvm use 22
 
 
-      # ============================================================
-      # INSTALL DEPENDENCIES + GENERATE PRISMA ON VM
-      #
-      # This uses the VM's existing .env
-      # ============================================================
-
-      - name: Prepare Prisma on VM
-        run: |
-
-          ssh prod <<'EOF'
-
-            set -e
-
-            APP_DIR="/home/ubuntu/EnChat"
-
-            cd "$APP_DIR"
-
-            echo "======================================"
-            echo "Loading Node.js"
-            echo "======================================"
-
-            export NVM_DIR="$HOME/.nvm"
-
-            if [ -s "$NVM_DIR/nvm.sh" ]; then
-              . "$NVM_DIR/nvm.sh"
-            fi
-
-            nvm use 24
+            npm install -g pm2
 
 
-            echo "======================================"
-            echo "Node version"
-            echo "======================================"
 
+            echo '--- Node version ---'
             node -v
             npm -v
+            pm2 -v
 
+            echo '--- Switching to project directory ---'
+            cd /home/ubuntu/EnChat
 
-            echo "======================================"
-            echo "Installing dependencies"
-            echo "======================================"
+            echo '--- Resetting local changes ---'
+            git reset --hard
 
+            echo '--- Pulling latest code ---'
+            git pull origin main
+
+            echo '--- Installing dependencies ---'
             npm install
 
-
-            echo "======================================"
-            echo "Generating Prisma Client"
-            echo "======================================"
-
+            echo '--- Generating Prisma client ---'
             cd packages/db
-
             npx prisma generate
+            npx tsc
+            cd ../../
 
-            cd ../..
+            echo '--- Building the app ---'
+            npm run build:force 
 
-            echo "Prisma Client generated successfully."
+            echo '--- Restarting app ---'
+            pm2 restart all
 
-          EOF
-
-
-      # ============================================================
-      # UPLOAD BUILD
-      # ============================================================
-
-      - name: Upload build to VM
-        run: |
-
-          scp /tmp/deploy.tar.gz \
-            prod:/tmp/enchat-deploy.tar.gz
-
-
-      # ============================================================
-      # EXTRACT BUILD ARTIFACTS
-      #
-      # IMPORTANT:
-      # We do NOT delete the repository.
-      # .env and .git remain untouched.
-      # ============================================================
-
-      - name: Deploy build files
-        run: |
-
-          ssh prod <<'EOF'
-
-            set -e
-
-            APP_DIR="/home/ubuntu/EnChat"
-
-            cd "$APP_DIR"
-
-            echo "======================================"
-            echo "Extracting build artifacts"
-            echo "======================================"
-
-            tar -xzf /tmp/enchat-deploy.tar.gz \
-              -C "$APP_DIR"
-
-            echo "Cleaning temporary deployment file..."
-
-            rm -f /tmp/enchat-deploy.tar.gz
-
-            echo "======================================"
-            echo "Deployment complete!"
-            echo "======================================"
-
-          EOF
+            echo '✅ Deployment complete!'
+          "
