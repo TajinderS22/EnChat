@@ -1,33 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 name: Deploy on Production
 
 on:
@@ -36,18 +6,87 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout (for CI context only)
+      # =========================
+      # Checkout
+      # =========================
+      - name: Checkout
         uses: actions/checkout@v4
 
+      # =========================
+      # Setup Node
+      # =========================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # =========================
+      # Install dependencies
+      # =========================
+      - name: Install dependencies
+        run: npm ci
+
+      # =========================
+      # Build Next.js ONLY
+      # =========================
+      - name: Build Next.js
+        run: |
+          cd apps/web
+          npm run build
+
+      # =========================
+      # Prepare deployment package
+      # =========================
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy/apps/web
+
+          # Next.js production build
+          cp -r apps/web/.next deploy/apps/web/.next
+
+          # Static/public files
+          if [ -d "apps/web/public" ]; then
+            cp -r apps/web/public deploy/apps/web/public
+          fi
+
+          # Next.js package files
+          cp apps/web/package.json deploy/apps/web/package.json
+
+          # Root package files
+          cp package.json deploy/package.json
+          cp package-lock.json deploy/package-lock.json
+
+          # Workspace configuration
+          cp turbo.json deploy/turbo.json
+
+          # Workspace packages required by the server
+          cp -r packages deploy/packages
+
+          # Server applications
+          cp -r apps/http-server deploy/apps/http-server
+          cp -r apps/websocket deploy/apps/websocket
+
+          # Remove build artifacts from server packages.
+          # They will be rebuilt on the VM.
+          find deploy/apps/http-server -type d -name dist -prune -exec rm -rf {} +
+          find deploy/apps/websocket -type d -name dist -prune -exec rm -rf {} +
+
+          tar -czf deploy.tar.gz -C deploy .
+
+      # =========================
+      # Setup SSH
+      # =========================
       - name: Setup SSH
         env:
           HOST: ${{ secrets.PROD_HOST }}
           USER: ${{ secrets.PROD_USER }}
           KEY: ${{ secrets.PROD_SSH_KEY }}
+
         run: |
           echo "$KEY" > key.pem
           chmod 600 key.pem
@@ -55,58 +94,117 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          cat >> ~/.ssh/config <<END
+          cat >> ~/.ssh/config <<EOF
           Host prod
             HostName $HOST
             User $USER
-            IdentityFile ./key.pem
+            IdentityFile $(pwd)/key.pem
             StrictHostKeyChecking no
-          END
+          EOF
 
-      - name: Pull and Deploy on VM
+      # =========================
+      # Upload deployment package
+      # =========================
+      - name: Upload deployment package
         run: |
-          ssh prod "
+          scp deploy.tar.gz prod:/tmp/enchat-deploy.tar.gz
+
+      # =========================
+      # Deploy on VM
+      # =========================
+      - name: Deploy on VM
+        run: |
+          ssh prod <<'EOF'
+
             set -e
 
-            # Load nvm
-            export NVM_DIR=\"\$HOME/.nvm\"
-            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
-            nvm install 24 
+            APP_DIR="/home/ubuntu/EnChat"
+
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+
             nvm use 24
 
+            echo "================================"
+            echo "Node version"
+            echo "================================"
 
-            npm install -g pm2
-
-
-
-            echo '--- Node version ---'
             node -v
             npm -v
-            pm2 -v
 
-            echo '--- Switching to project directory ---'
-            cd /home/ubuntu/EnChat
+            echo "================================"
+            echo "Preparing application"
+            echo "================================"
 
-            echo '--- Resetting local changes ---'
-            git reset --hard
+            mkdir -p "$APP_DIR"
 
-            echo '--- Pulling latest code ---'
-            git pull origin main
+            # Preserve production .env
+            if [ -f "$APP_DIR/.env" ]; then
+              cp "$APP_DIR/.env" /tmp/enchat.env
+            fi
 
-            echo '--- Installing dependencies ---'
-            npm install
+            echo "Removing old application files..."
 
-            echo '--- Generating Prisma client ---'
+            find "$APP_DIR" -mindepth 1 -maxdepth 1 \
+              ! -name ".env" \
+              -exec rm -rf {} +
+
+            echo "Extracting deployment..."
+
+            tar -xzf /tmp/enchat-deploy.tar.gz -C "$APP_DIR"
+
+            rm -f /tmp/enchat-deploy.tar.gz
+
+            # Restore production .env
+            if [ -f /tmp/enchat.env ]; then
+              cp /tmp/enchat.env "$APP_DIR/.env"
+              rm -f /tmp/enchat.env
+            fi
+
+            cd "$APP_DIR"
+
+            echo "================================"
+            echo "Installing dependencies"
+            echo "================================"
+
+            npm ci
+
+            echo "================================"
+            echo "Generating Prisma client"
+            echo "================================"
+
             cd packages/db
+
             npx prisma generate
+
             npx tsc
-            cd ../../
 
-            echo '--- Building the app ---'
-            npm run build:force 
+            cd "$APP_DIR"
 
-            echo '--- Restarting app ---'
+            echo "================================"
+            echo "Building HTTP server"
+            echo "================================"
+
+            cd apps/http-server
+            npx tsc -b
+
+            echo "================================"
+            echo "Building WebSocket server"
+            echo "================================"
+
+            cd ../websocket
+            npx tsc -b
+
+            cd "$APP_DIR"
+
+            echo "================================"
+            echo "Restarting PM2"
+            echo "================================"
+
             pm2 restart all
 
-            echo '✅ Deployment complete!'
-          "
+            echo "================================"
+            echo "Deployment complete!"
+            echo "================================"
+
+          EOF
