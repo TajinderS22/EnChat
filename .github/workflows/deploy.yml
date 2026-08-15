@@ -31,8 +31,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+     
       # =========================
-      # Build Next.js ONLY
+      # Build encryption package
+      # =========================
+      - name: Build encryption package
+        run: |
+          npm run build --workspace=@repo/encryption
+
+      # =========================
+      # Build Next.js
       # =========================
       - name: Build Next.js
         run: |
@@ -170,32 +178,38 @@ jobs:
             npm ci
 
             echo "================================"
+            echo "Building encryption package"
+            echo "================================"
+                    
+            cd "$APP_DIR/packages/encryption"
+                    
+            npx tsc
+                    
+            echo "================================"
             echo "Generating Prisma client"
             echo "================================"
-
-            cd packages/db
-
+                    
+            cd "$APP_DIR/packages/db"
+                    
             npx prisma generate
-
             npx tsc
-
-            cd "$APP_DIR"
-
+                    
             echo "================================"
             echo "Building HTTP server"
             echo "================================"
-
-            cd apps/http-server
+                    
+            cd "$APP_DIR/apps/http-server"
+                    
             npx tsc -b
-
+                    
             echo "================================"
             echo "Building WebSocket server"
             echo "================================"
-
-            cd ../websocket
+                    
+            cd "$APP_DIR/apps/websocket"
+                    
             npx tsc -b
-
-            cd "$APP_DIR"
+                        cd "$APP_DIR"
 
             echo "================================"
             echo "Restarting PM2"
