@@ -1,7 +1,11 @@
 {
   "extends": "@repo/typescript-config/nextjs.json",
   "compilerOptions": {
-    "lib": ["ES2015", "DOM"],
+    "jsx": "preserve",
+    "lib": [
+      "ES2015",
+      "DOM"
+    ],
     "plugins": [
       {
         "name": "next"

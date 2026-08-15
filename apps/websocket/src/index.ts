@@ -169,16 +169,6 @@ wss.on("connection", async (ws: extendedWebSocket) => {
           }
         }
 
-        messagesToBeSaved.push({
-          messageData: {
-            userId: fromUserId,
-            chatroomId,
-            message,
-            messageFromSender,
-          },
-          time: Date.now(),
-        });
-
         const recipientSocket = onlineUsers.get(toUserId);
 
         ws.send(

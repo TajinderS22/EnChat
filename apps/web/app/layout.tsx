@@ -1,4 +1,6 @@
 ''
+
+import { GoogleAnalytics } from '@next/third-parties/google'
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -18,6 +20,7 @@ export const metadata: Metadata = {
 
 
 import Session from "../hook/Session";
+import React from 'react';
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,6 +34,7 @@ export default function RootLayout({
         </Session>
 
       </body>
+      <GoogleAnalytics gaId={'G-8L1GRNKL4B'}/>
     </html>
   );
 }

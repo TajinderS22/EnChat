@@ -6,18 +6,72 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout (for CI context only)
+      # =========================
+      # Checkout
+      # =========================
+      - name: Checkout
         uses: actions/checkout@v4
 
+      # =========================
+      # Setup Node
+      # =========================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # =========================
+      # Install dependencies
+      # =========================
+      - name: Install dependencies
+        run: npm ci
+
+      # =========================
+      # Prisma
+      # =========================
+      - name: Generate Prisma client
+        run: |
+          cd packages/db
+          npx prisma generate
+
+      # =========================
+      # TypeScript
+      # =========================
+      - name: Compile DB package
+        run: |
+          cd packages/db
+          npx tsc
+
+      # =========================
+      # Build
+      # =========================
+      - name: Build application
+        run: npm run build:force
+
+      # =========================
+      # Remove unnecessary files
+      # =========================
+      - name: Prepare deployment package
+        run: |
+          rm -rf .git
+          rm -rf .github
+
+          tar -czf deploy.tar.gz .
+
+      # =========================
+      # Setup SSH
+      # =========================
       - name: Setup SSH
         env:
           HOST: ${{ secrets.PROD_HOST }}
           USER: ${{ secrets.PROD_USER }}
           KEY: ${{ secrets.PROD_SSH_KEY }}
+
         run: |
           echo "$KEY" > key.pem
           chmod 600 key.pem
@@ -25,58 +79,46 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          cat >> ~/.ssh/config <<END
+          cat >> ~/.ssh/config <<EOF
           Host prod
             HostName $HOST
             User $USER
-            IdentityFile ./key.pem
+            IdentityFile $(pwd)/key.pem
             StrictHostKeyChecking no
-          END
+          EOF
 
-      - name: Pull and Deploy on VM
+      # =========================
+      # Send build to server
+      # =========================
+      - name: Upload build
         run: |
-          ssh prod "
+          scp deploy.tar.gz prod:/tmp/enchat-deploy.tar.gz
+
+      # =========================
+      # Extract on server
+      # =========================
+      - name: Deploy files
+        run: |
+          ssh prod <<'EOF'
+
             set -e
 
-            # Load nvm
-            export NVM_DIR=\"\$HOME/.nvm\"
-            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
-            nvm install 22 
-            nvm use 22
+            APP_DIR="/home/ubuntu/EnChat"
+
+            echo "Removing old application..."
+
+            rm -rf "$APP_DIR"/*
+
+            echo "Extracting new application..."
+
+            tar -xzf /tmp/enchat-deploy.tar.gz -C "$APP_DIR"
+
+            echo "Cleaning temporary file..."
+
+            rm -f /tmp/enchat-deploy.tar.gz
+
+            echo "Deployment complete!"
+
+          EOF
 
 
-            npm install -g pm2
-
-
-
-            echo '--- Node version ---'
-            node -v
-            npm -v
-            pm2 -v
-
-            echo '--- Switching to project directory ---'
-            cd /home/ubuntu/EnChat
-
-            echo '--- Resetting local changes ---'
-            git reset --hard
-
-            echo '--- Pulling latest code ---'
-            git pull origin main
-
-            echo '--- Installing dependencies ---'
-            npm install
-
-            echo '--- Generating Prisma client ---'
-            cd packages/db
-            npx prisma generate
-            npx tsc
-            cd ../../
-
-            echo '--- Building the app ---'
-            npm run build:force 
-
-            echo '--- Restarting app ---'
-            pm2 restart all
-
-            echo '✅ Deployment complete!'
-          "
