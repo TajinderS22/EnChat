@@ -3,7 +3,6 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist",
-    "baseUrl": ".",
     // you can also add other overrides here
     // "declaration": true,
     // "moduleResolution": "node",
