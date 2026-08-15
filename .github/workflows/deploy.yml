@@ -10,62 +10,139 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # Checkout
-      # =========================
+
+      # ============================================================
+      # CHECKOUT
+      # ============================================================
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      # =========================
-      # Setup Node
-      # =========================
+
+      # ============================================================
+      # SETUP NODE
+      # ============================================================
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
 
-      # =========================
-      # Install dependencies
-      # =========================
+
+      # ============================================================
+      # INSTALL DEPENDENCIES
+      # ============================================================
+
       - name: Install dependencies
         run: npm ci
 
-      # =========================
-      # Prisma
-      # =========================
-      - name: Generate Prisma client
-        run: |
-          cd packages/db
-          npx prisma generate
 
-      # =========================
-      # TypeScript
-      # =========================
-      - name: Compile DB package
-        run: |
-          cd packages/db
-          npx tsc
+      # ============================================================
+      # BUILD APPLICATIONS ON GITHUB RUNNER
+      # ============================================================
 
-      # =========================
-      # Build
-      # =========================
       - name: Build application
         run: npm run build:force
 
-      # =========================
-      # Remove unnecessary files
-      # =========================
+
+      # ============================================================
+      # PREPARE BUILD ARTIFACTS
+      #
+      # We DO NOT send:
+      #   .git
+      #   .github
+      #   node_modules
+      #   .env
+      #   Prisma generated client
+      #
+      # The source code already exists on the VM.
+      # ============================================================
+
       - name: Prepare deployment package
         run: |
-          rm -rf .git
-          rm -rf .github
 
-          tar -czf deploy.tar.gz .
+          rm -rf /tmp/enchat-deploy
+          mkdir -p /tmp/enchat-deploy
 
-      # =========================
-      # Setup SSH
-      # =========================
+
+          # --------------------------------------------------------
+          # Next.js
+          # --------------------------------------------------------
+
+          if [ -d "apps/web/.next" ]; then
+            mkdir -p /tmp/enchat-deploy/apps/web
+            cp -r apps/web/.next /tmp/enchat-deploy/apps/web/
+          fi
+
+
+          # --------------------------------------------------------
+          # Web public files
+          # --------------------------------------------------------
+
+          if [ -d "apps/web/public" ]; then
+            mkdir -p /tmp/enchat-deploy/apps/web
+            cp -r apps/web/public /tmp/enchat-deploy/apps/web/
+          fi
+
+
+          # --------------------------------------------------------
+          # HTTP SERVER
+          # --------------------------------------------------------
+
+          if [ -d "apps/http-server/dist" ]; then
+            mkdir -p /tmp/enchat-deploy/apps/http-server
+            cp -r apps/http-server/dist /tmp/enchat-deploy/apps/http-server/
+          fi
+
+
+          # --------------------------------------------------------
+          # WEBSOCKET SERVER
+          # --------------------------------------------------------
+
+          if [ -d "apps/websocket/dist" ]; then
+            mkdir -p /tmp/enchat-deploy/apps/websocket
+            cp -r apps/websocket/dist /tmp/enchat-deploy/apps/websocket/
+          fi
+
+
+          # --------------------------------------------------------
+          # DB BUILD
+          #
+          # Only copy this if your DB package actually produces dist.
+          # Prisma generated client is intentionally NOT copied.
+          # --------------------------------------------------------
+
+          if [ -d "packages/db/dist" ]; then
+            mkdir -p /tmp/enchat-deploy/packages/db
+            cp -r packages/db/dist /tmp/enchat-deploy/packages/db/
+          fi
+
+
+          # --------------------------------------------------------
+          # SHOW DEPLOYMENT CONTENT
+          # --------------------------------------------------------
+
+          echo "======================================"
+          echo "Files being deployed:"
+          echo "======================================"
+
+          find /tmp/enchat-deploy -maxdepth 6 -type f | sort
+
+
+          # --------------------------------------------------------
+          # CREATE ARCHIVE OUTSIDE SOURCE DIRECTORY
+          # --------------------------------------------------------
+
+          tar -czf /tmp/deploy.tar.gz \
+            -C /tmp/enchat-deploy \
+            .
+
+
+      # ============================================================
+      # SETUP SSH
+      # ============================================================
+
       - name: Setup SSH
         env:
           HOST: ${{ secrets.PROD_HOST }}
@@ -73,6 +150,7 @@ jobs:
           KEY: ${{ secrets.PROD_SSH_KEY }}
 
         run: |
+
           echo "$KEY" > key.pem
           chmod 600 key.pem
 
@@ -87,38 +165,137 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
-      # =========================
-      # Send build to server
-      # =========================
-      - name: Upload build
-        run: |
-          scp deploy.tar.gz prod:/tmp/enchat-deploy.tar.gz
 
-      # =========================
-      # Extract on server
-      # =========================
-      - name: Deploy files
+      # ============================================================
+      # UPDATE SOURCE CODE ON VM
+      # ============================================================
+
+      - name: Pull latest code on VM
         run: |
+
           ssh prod <<'EOF'
 
             set -e
 
             APP_DIR="/home/ubuntu/EnChat"
 
-            echo "Removing old application..."
+            cd "$APP_DIR"
 
-            rm -rf "$APP_DIR"/*
+            echo "======================================"
+            echo "Pulling latest source code"
+            echo "======================================"
 
-            echo "Extracting new application..."
+            git reset --hard
+            git pull origin main
 
-            tar -xzf /tmp/enchat-deploy.tar.gz -C "$APP_DIR"
-
-            echo "Cleaning temporary file..."
-
-            rm -f /tmp/enchat-deploy.tar.gz
-
-            echo "Deployment complete!"
+            echo "Source code updated."
 
           EOF
 
 
+      # ============================================================
+      # INSTALL DEPENDENCIES + GENERATE PRISMA ON VM
+      #
+      # This uses the VM's existing .env
+      # ============================================================
+
+      - name: Prepare Prisma on VM
+        run: |
+
+          ssh prod <<'EOF'
+
+            set -e
+
+            APP_DIR="/home/ubuntu/EnChat"
+
+            cd "$APP_DIR"
+
+            echo "======================================"
+            echo "Loading Node.js"
+            echo "======================================"
+
+            export NVM_DIR="$HOME/.nvm"
+
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
+
+            nvm use 24
+
+
+            echo "======================================"
+            echo "Node version"
+            echo "======================================"
+
+            node -v
+            npm -v
+
+
+            echo "======================================"
+            echo "Installing dependencies"
+            echo "======================================"
+
+            npm install
+
+
+            echo "======================================"
+            echo "Generating Prisma Client"
+            echo "======================================"
+
+            cd packages/db
+
+            npx prisma generate
+
+            cd ../..
+
+            echo "Prisma Client generated successfully."
+
+          EOF
+
+
+      # ============================================================
+      # UPLOAD BUILD
+      # ============================================================
+
+      - name: Upload build to VM
+        run: |
+
+          scp /tmp/deploy.tar.gz \
+            prod:/tmp/enchat-deploy.tar.gz
+
+
+      # ============================================================
+      # EXTRACT BUILD ARTIFACTS
+      #
+      # IMPORTANT:
+      # We do NOT delete the repository.
+      # .env and .git remain untouched.
+      # ============================================================
+
+      - name: Deploy build files
+        run: |
+
+          ssh prod <<'EOF'
+
+            set -e
+
+            APP_DIR="/home/ubuntu/EnChat"
+
+            cd "$APP_DIR"
+
+            echo "======================================"
+            echo "Extracting build artifacts"
+            echo "======================================"
+
+            tar -xzf /tmp/enchat-deploy.tar.gz \
+              -C "$APP_DIR"
+
+            echo "Cleaning temporary deployment file..."
+
+            rm -f /tmp/enchat-deploy.tar.gz
+
+            echo "======================================"
+            echo "Deployment complete!"
+            echo "======================================"
+
+          EOF
