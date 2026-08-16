@@ -10,85 +10,176 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # Checkout
-      # =========================
+
+      # ============================================================
+      # Checkout repository
+      # ============================================================
       - name: Checkout
         uses: actions/checkout@v4
 
-      # =========================
-      # Setup Node
-      # =========================
+
+      # ============================================================
+      # Setup Node.js
+      # ============================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
-      # =========================
-      # Install dependencies
-      # =========================
-      - name: Install dependencies
-        run: npm ci
 
-     
-      # =========================
+      # ============================================================
+      # Check environment
+      # ============================================================
+      - name: Check environment
+        run: |
+          echo "================================"
+          echo "Node"
+          echo "================================"
+
+          node -v
+          npm -v
+
+          echo "================================"
+          echo "Architecture"
+          echo "================================"
+
+          uname -m
+          node -p "process.arch"
+
+
+      # ============================================================
+      # Install dependencies
+      # ============================================================
+      - name: Install dependencies
+        run: |
+          npm ci
+
+
+      # ============================================================
       # Build encryption package
-      # =========================
+      # ============================================================
       - name: Build encryption package
         run: |
           npm run build --workspace=@repo/encryption
 
-      # =========================
+
+      # ============================================================
+      # Generate Prisma + Build DB
+      # ============================================================
+      - name: Build DB
+        run: |
+          cd packages/db
+
+          npx prisma generate
+
+          npm run build
+
+
+      # ============================================================
       # Build Next.js
-      # =========================
+      # ============================================================
       - name: Build Next.js
         run: |
           cd apps/web
+
           npm run build
 
-      # =========================
-      # Prepare deployment package
-      # =========================
-      - name: Prepare deployment package
+
+      # ============================================================
+      # Build HTTP server
+      # ============================================================
+      - name: Build HTTP server
         run: |
-          mkdir -p deploy/apps/web
+          cd apps/http-server
 
-          # Next.js production build
-          cp -r apps/web/.next deploy/apps/web/.next
+          npm run build
 
-          # Static/public files
-          if [ -d "apps/web/public" ]; then
-            cp -r apps/web/public deploy/apps/web/public
-          fi
 
-          # Next.js package files
-          cp apps/web/package.json deploy/apps/web/package.json
+      # ============================================================
+      # Build WebSocket server
+      # ============================================================
+      - name: Build WebSocket server
+        run: |
+          cd apps/websocket
 
-          # Root package files
-          cp package.json deploy/package.json
-          cp package-lock.json deploy/package-lock.json
+          npm run build
 
-          # Workspace configuration
-          cp turbo.json deploy/turbo.json
 
-          # Workspace packages required by the server
-          cp -r packages deploy/packages
+      # ============================================================
+      # Verify build artifacts
+      # ============================================================
+      - name: Verify build
+        run: |
+          echo "================================"
+          echo "Checking build artifacts"
+          echo "================================"
 
-          # Server applications
-          cp -r apps/http-server deploy/apps/http-server
-          cp -r apps/websocket deploy/apps/websocket
+          echo ""
+          echo "node_modules:"
+          du -sh node_modules
 
-          # Remove build artifacts from server packages.
-          # They will be rebuilt on the VM.
-          find deploy/apps/http-server -type d -name dist -prune -exec rm -rf {} +
-          find deploy/apps/websocket -type d -name dist -prune -exec rm -rf {} +
+          echo ""
+          echo "Next.js:"
+          du -sh apps/web/.next
 
-          tar -czf deploy.tar.gz -C deploy .
+          echo ""
+          echo "HTTP server:"
+          du -sh apps/http-server/dist
 
-      # =========================
+          echo ""
+          echo "WebSocket:"
+          du -sh apps/websocket/dist
+
+          echo ""
+          echo "DB:"
+          du -sh packages/db/dist
+
+          echo ""
+          echo "Encryption:"
+          du -sh packages/encryption/dist
+
+
+      # ============================================================
+      # Create complete deployment archive
+      #
+      # This intentionally includes:
+      #
+      # .git
+      # .github
+      # source code
+      # node_modules
+      # .next
+      # dist
+      # Prisma generated files
+      # package files
+      # everything else
+      #
+      # Runner does not contain .env, so .env is NOT included.
+      # ============================================================
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude='./deploy.tar.gz' \
+            -czf /tmp/enchat-deploy.tar.gz \
+            .
+
+
+      # ============================================================
+      # Show deployment package size
+      # ============================================================
+      - name: Check deployment package
+        run: |
+          echo "================================"
+          echo "Deployment package"
+          echo "================================"
+
+          ls -lh /tmp/enchat-deploy.tar.gz
+
+
+      # ============================================================
       # Setup SSH
-      # =========================
+      # ============================================================
       - name: Setup SSH
         env:
           HOST: ${{ secrets.PROD_HOST }}
@@ -97,6 +188,7 @@ jobs:
 
         run: |
           echo "$KEY" > key.pem
+
           chmod 600 key.pem
 
           mkdir -p ~/.ssh
@@ -110,16 +202,20 @@ jobs:
             StrictHostKeyChecking no
           EOF
 
-      # =========================
+
+      # ============================================================
       # Upload deployment package
-      # =========================
+      # ============================================================
       - name: Upload deployment package
         run: |
-          scp deploy.tar.gz prod:/tmp/enchat-deploy.tar.gz
+          scp \
+            /tmp/enchat-deploy.tar.gz \
+            prod:/tmp/enchat-deploy.tar.gz
 
-      # =========================
+
+      # ============================================================
       # Deploy on VM
-      # =========================
+      # ============================================================
       - name: Deploy on VM
         run: |
           ssh prod <<'EOF'
@@ -128,94 +224,199 @@ jobs:
 
             APP_DIR="/home/ubuntu/EnChat"
 
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
+            echo "================================"
+            echo "Starting deployment"
+            echo "================================"
 
-            nvm use 24
+            mkdir -p "$APP_DIR"
+
+
+            # ========================================================
+            # Preserve production .env
+            # ========================================================
+
+            echo "Preserving production .env..."
+
+            if [ -f "$APP_DIR/.env" ]; then
+              cp "$APP_DIR/.env" /tmp/enchat-production.env
+              echo ".env backed up."
+            else
+              echo "No existing .env found."
+            fi
+
+
+            # ========================================================
+            # Remove old repository
+            #
+            # Everything is removed EXCEPT .env
+            # ========================================================
 
             echo "================================"
-            echo "Node version"
+            echo "Removing old application"
+            echo "================================"
+
+            find "$APP_DIR" \
+              -mindepth 1 \
+              -maxdepth 1 \
+              ! -name ".env" \
+              -exec rm -rf {} +
+
+
+            # ========================================================
+            # Extract new deployment
+            # ========================================================
+
+            echo "================================"
+            echo "Extracting new deployment"
+            echo "================================"
+
+            tar \
+              -xzf /tmp/enchat-deploy.tar.gz \
+              -C "$APP_DIR"
+
+
+            # ========================================================
+            # Remove uploaded archive
+            # ========================================================
+
+            rm -f /tmp/enchat-deploy.tar.gz
+
+
+            # ========================================================
+            # Restore production .env
+            # ========================================================
+
+            echo "================================"
+            echo "Restoring production .env"
+            echo "================================"
+
+            if [ -f /tmp/enchat-production.env ]; then
+
+              cp \
+                /tmp/enchat-production.env \
+                "$APP_DIR/.env"
+
+              rm -f /tmp/enchat-production.env
+
+              echo ".env restored."
+
+            else
+
+              echo "WARNING: No production .env was found."
+
+            fi
+
+
+            # ========================================================
+            # Enter application directory
+            # ========================================================
+
+            cd "$APP_DIR"
+
+
+            # ========================================================
+            # Setup Node
+            #
+            # No installation/build happens here.
+            # This is only to make sure PM2 uses Node 24.
+            # ========================================================
+
+            export NVM_DIR="$HOME/.nvm"
+
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              source "$NVM_DIR/nvm.sh"
+              nvm use 24
+            fi
+
+
+            # ========================================================
+            # Verify Node
+            # ========================================================
+
+            echo "================================"
+            echo "Node environment"
             echo "================================"
 
             node -v
             npm -v
 
+            echo "Architecture:"
+            uname -m
+
+            echo "Node architecture:"
+            node -p "process.arch"
+
+
+            # ========================================================
+            # Verify deployed files
+            # ========================================================
+
             echo "================================"
-            echo "Preparing application"
+            echo "Verifying deployment"
             echo "================================"
 
-            mkdir -p "$APP_DIR"
+            echo ""
+            echo "Repository:"
+            du -sh .
 
-            # Preserve production .env
-            if [ -f "$APP_DIR/.env" ]; then
-              cp "$APP_DIR/.env" /tmp/enchat.env
+            echo ""
+            echo "node_modules:"
+            du -sh node_modules
+
+            echo ""
+            echo "Next.js:"
+            du -sh apps/web/.next
+
+            echo ""
+            echo "HTTP server:"
+            du -sh apps/http-server/dist
+
+            echo ""
+            echo "WebSocket:"
+            du -sh apps/websocket/dist
+
+            echo ""
+            echo "DB:"
+            du -sh packages/db/dist
+
+            echo ""
+            echo "Encryption:"
+            du -sh packages/encryption/dist
+
+            echo ""
+            echo ".env:"
+            if [ -f ".env" ]; then
+              echo ".env exists"
+            else
+              echo "WARNING: .env does not exist"
             fi
 
-            echo "Removing old application files..."
 
-            find "$APP_DIR" -mindepth 1 -maxdepth 1 \
-              ! -name ".env" \
-              -exec rm -rf {} +
-
-            echo "Extracting deployment..."
-
-            tar -xzf /tmp/enchat-deploy.tar.gz -C "$APP_DIR"
-
-            rm -f /tmp/enchat-deploy.tar.gz
-
-            # Restore production .env
-            if [ -f /tmp/enchat.env ]; then
-              cp /tmp/enchat.env "$APP_DIR/.env"
-              rm -f /tmp/enchat.env
-            fi
-
-            cd "$APP_DIR"
-
-            echo "================================"
-            echo "Installing dependencies"
-            echo "================================"
-
-            npm ci
-
-            echo "================================"
-            echo "Building encryption package"
-            echo "================================"
-                    
-            cd "$APP_DIR/packages/encryption"
-                    
-            npx tsc
-                    
-            echo "================================"
-            echo "Generating Prisma client"
-            echo "================================"
-                    
-            cd "$APP_DIR/packages/db"
-                    
-            npx prisma generate
-            npx tsc
-                    
-            echo "================================"
-            echo "Building HTTP server"
-            echo "================================"
-                    
-            cd "$APP_DIR/apps/http-server"
-                    
-            npx tsc -b
-                    
-            echo "================================"
-            echo "Building WebSocket server"
-            echo "================================"
-                    
-            cd "$APP_DIR/apps/websocket"
-                    
-            npx tsc -b
-                        cd "$APP_DIR"
+            # ========================================================
+            # Restart PM2
+            # ========================================================
 
             echo "================================"
             echo "Restarting PM2"
             echo "================================"
 
             pm2 restart all
+
+
+            # ========================================================
+            # PM2 status
+            # ========================================================
+
+            echo "================================"
+            echo "PM2 status"
+            echo "================================"
+
+            pm2 status
+
+
+            # ========================================================
+            # Deployment complete
+            # ========================================================
 
             echo "================================"
             echo "Deployment complete!"
